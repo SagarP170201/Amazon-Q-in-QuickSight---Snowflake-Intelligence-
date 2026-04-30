@@ -2,6 +2,29 @@
 
 Migration of **XpressBees B2B Profitability AI Agent** from Amazon Q/QuickSight to Snowflake Intelligence.
 
+---
+
+## Quick Start (Start Here)
+
+> **Prerequisites**: Snowflake account with `ACCOUNTADMIN`, Python 3.8+ with `snowflake-connector-python` and `python-docx` installed, monthly data CSVs, XB Guide FINAL.docx, XB Prompt FINAL.docx.
+
+| Step | What | How | Time |
+|------|------|-----|------|
+| **1** | Create database, schemas, warehouse | Run `scripts/01_setup_database.sql` in Snowsight | 1 min |
+| **2** | Create all 9 tables | Run `scripts/02_create_tables.sql` in Snowsight | 1 min |
+| **3** | Upload & load data | Upload CSVs to stage, run `scripts/03_load_data.sql` per month (replace `<month>` with folder name) | 10-30 min |
+| **4** | Deploy Semantic View | `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/04_deploy_semantic_view.py` | 1 min |
+| **5** | Create Cortex Search | Place both .docx files in current dir, run `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/05_create_cortex_search.py` | 2 min |
+| **6** | Create Cortex Agent | `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/06_create_agent.py` | 1 min |
+| **7** | Register in Snowflake Intelligence | Go to `ai.snowflake.com` → Intelligence → Create → Select `XPRESSBEES_PROFITABILITY_AGENT` | 1 min |
+| **8** | Test | Ask: *"What is my overall business this month?"* | Done! |
+
+> **Note**: Replace `<conn>` with your Snowflake connection name. To find available connections, run `snow connection list` in your terminal.
+
+> **Data Loading**: For Oct'25–Mar'26, repeat Step 3 for each month. CSVs should match the column structure in `02_create_tables.sql`. Data is appended — do NOT truncate tables between months.
+
+---
+
 ## Architecture
 
 | Capability | AWS (Before) | Snowflake (After) |
@@ -230,6 +253,25 @@ GRANT USAGE ON WAREHOUSE SNOW_INTELLIGENCE_DEMO_WH TO ROLE XB_PROFITABILITY_VIEW
 -- Assign to users
 GRANT ROLE XB_PROFITABILITY_VIEWER TO USER <username>;
 ```
+
+## Handover Checklist (What's Done vs What's Remaining)
+
+### Done (POC — Feb 2026 data)
+- [x] Database, schemas, warehouse, stages created
+- [x] 9 tables created and loaded with Feb 2026 data
+- [x] Semantic View deployed with 16 VQRs, 18 dimensions, 22 facts, 15 metrics
+- [x] Cortex Search Service created (XB Guide + XB Prompt — 76 chunks)
+- [x] Cortex Agent created with 2 tools (profitability_data + xb_knowledge)
+- [x] Agent registered in Snowflake Intelligence
+- [x] 19 of 38 questions answerable and tested
+
+### Remaining (Customer)
+- [ ] Load Oct'25 → Mar'26 data (6 months) using Step 3 above
+- [ ] Add 19 multi-month VQRs to `semantic_model/xpressbees_profitability_semantic_model.yaml` (see Phase 2 above)
+- [ ] Re-deploy semantic view after adding VQRs (`python3 scripts/04_deploy_semantic_view.py`)
+- [ ] Test all 38 questions end-to-end (see `docs/test_questions.md`)
+- [ ] Set up RBAC roles and grants (see Phase 4 above)
+- [ ] Establish monthly data refresh process
 
 ## File Structure
 
