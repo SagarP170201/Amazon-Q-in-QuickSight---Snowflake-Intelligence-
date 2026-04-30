@@ -6,13 +6,17 @@ Migration of **XpressBees B2B Profitability AI Agent** from Amazon Q/QuickSight 
 
 ## Quick Start (Start Here)
 
-> **Prerequisites**: Snowflake account with `ACCOUNTADMIN`, Python 3.8+ with `snowflake-connector-python` and `python-docx` installed, monthly data CSVs, XB Guide FINAL.docx, XB Prompt FINAL.docx.
+> **Prerequisites**: Snowflake account with `ACCOUNTADMIN` role, Python 3.8+, monthly data CSVs, XB Guide FINAL.docx, XB Prompt FINAL.docx.
+>
+> ```bash
+> pip install -r requirements.txt   # installs snowflake-connector-python, python-docx
+> ```
 
 | Step | What | How | Time |
 |------|------|-----|------|
 | **1** | Create database, schemas, warehouse | Run `scripts/01_setup_database.sql` in Snowsight | 1 min |
 | **2** | Create all 9 tables | Run `scripts/02_create_tables.sql` in Snowsight | 1 min |
-| **3** | Upload & load data | Upload CSVs to stage, run `scripts/03_load_data.sql` per month (replace `<month>` with folder name) | 10-30 min |
+| **3** | Upload & load data | Upload CSVs via SnowSQL (`PUT`) or Snowsight UI, then run `scripts/03_load_data.sql` per month (replace `<month>` with folder name). **Note: PUT commands cannot run in Snowsight — use SnowSQL CLI or upload via Snowsight UI.** | 10-30 min |
 | **4** | Deploy Semantic View | `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/04_deploy_semantic_view.py` | 1 min |
 | **5** | Create Cortex Search | Place both .docx files in current dir, run `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/05_create_cortex_search.py` | 2 min |
 | **6** | Create Cortex Agent | `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/06_create_agent.py` | 1 min |
