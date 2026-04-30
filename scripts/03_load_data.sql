@@ -1,0 +1,84 @@
+-- XpressBees Profitability AI Agent - Data Loading
+-- Upload CSV files to stage first, then run COPY INTO
+-- Repeat for each month's data folder
+
+-- Step 1: Upload files to stage (run from SnowSQL or Python)
+-- PUT file:///path/to/<month>/B2B_Revenue.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+-- PUT file:///path/to/<month>/AWB_File.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+-- PUT file:///path/to/<month>/FM_Journey.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+-- PUT file:///path/to/<month>/LM_Journey.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+-- PUT file:///path/to/<month>/MM_Journey.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+-- PUT file:///path/to/<month>/Daily_Load.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+-- PUT file:///path/to/<month>/Weighted_Utilization.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+
+-- Step 2: Load data (example for one month — repeat for all 12)
+USE DATABASE XPRESSBEES_PROFITABILITY;
+USE SCHEMA RAW;
+USE WAREHOUSE SNOW_INTELLIGENCE_DEMO_WH;
+
+-- B2B Revenue
+COPY INTO B2B_REVENUE
+FROM @DATA_STAGE/<month>/B2B_Revenue.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- AWB File
+COPY INTO AWB_FILE
+FROM @DATA_STAGE/<month>/AWB_File.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- FM Journey
+COPY INTO FM_JOURNEY
+FROM @DATA_STAGE/<month>/FM_Journey.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- LM Journey
+COPY INTO LM_JOURNEY
+FROM @DATA_STAGE/<month>/LM_Journey.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- MM Journey
+COPY INTO MM_JOURNEY
+FROM @DATA_STAGE/<month>/MM_Journey.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- Daily Load
+COPY INTO DAILY_LOAD
+FROM @DATA_STAGE/<month>/Daily_Load.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- Weighted Utilization
+COPY INTO WEIGHTED_UTILIZATION
+FROM @DATA_STAGE/<month>/Weighted_Utilization.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- Dimension tables (load once — not per month)
+-- PUT file:///path/to/Hub-city_mapping.csv @RAW.DATA_STAGE/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+-- PUT file:///path/to/Hub_to_zone_mapping.csv @RAW.DATA_STAGE/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
+
+COPY INTO DIM_HUB_CITY
+FROM @DATA_STAGE/Hub-city_mapping.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+COPY INTO DIM_HUB_TO_ZONE
+FROM @DATA_STAGE/Hub_to_zone_mapping.csv
+FILE_FORMAT = CSV_FORMAT
+ON_ERROR = 'CONTINUE';
+
+-- Verify row counts
+SELECT 'B2B_REVENUE' AS tbl, COUNT(*) AS rows FROM B2B_REVENUE
+UNION ALL SELECT 'AWB_FILE', COUNT(*) FROM AWB_FILE
+UNION ALL SELECT 'FM_JOURNEY', COUNT(*) FROM FM_JOURNEY
+UNION ALL SELECT 'LM_JOURNEY', COUNT(*) FROM LM_JOURNEY
+UNION ALL SELECT 'MM_JOURNEY', COUNT(*) FROM MM_JOURNEY
+UNION ALL SELECT 'DAILY_LOAD', COUNT(*) FROM DAILY_LOAD
+UNION ALL SELECT 'WEIGHTED_UTILIZATION', COUNT(*) FROM WEIGHTED_UTILIZATION
+UNION ALL SELECT 'DIM_HUB_CITY', COUNT(*) FROM DIM_HUB_CITY
+UNION ALL SELECT 'DIM_HUB_TO_ZONE', COUNT(*) FROM DIM_HUB_TO_ZONE;
