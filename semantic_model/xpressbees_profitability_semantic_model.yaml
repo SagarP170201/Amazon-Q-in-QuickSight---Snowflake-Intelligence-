@@ -407,6 +407,48 @@ tables:
   primary_key:
     columns:
     - awb
+- name: mm_journey
+  description: Mid-mile journey details — trip connections, loading/unloading hubs, connection types.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: MM_JOURNEY
+  dimensions:
+  - name: mm_awb
+    expr: TRIM(AWB)
+    description: AWB number
+    data_type: TEXT
+  - name: mm_tripid
+    expr: MM_TRIPID
+    description: Mid-mile trip ID
+    data_type: TEXT
+  - name: mm_connectiontype
+    expr: CONNECTIONTYPE
+    description: Connection type (Local/Network)
+    sample_values:
+    - Local Connection
+    - Network Connection
+    data_type: TEXT
+  - name: mm_connectionid
+    expr: CONNECTIONID
+    description: Connection ID
+    data_type: TEXT
+  - name: mm_depart_location
+    expr: '"DEPART_LOCATION (Loading)"'
+    description: Departure/loading hub
+    data_type: TEXT
+  - name: mm_arrival_location
+    expr: '"ARRIVAL_LOCATION (UnLoading)"'
+    description: Arrival/unloading hub
+    data_type: TEXT
+  facts:
+  - name: mm_trip_order
+    expr: '"TRIP ORDER"'
+    description: Trip leg order in the journey
+    data_type: NUMBER
+  primary_key:
+    columns:
+    - mm_awb
 - name: dim_hub_city
   description: Hub to city and territory mapping.
   base_table:
@@ -714,6 +756,14 @@ relationships:
   right_table: b2b_revenue
   relationship_columns:
   - left_column: awb
+    right_column: awb_no
+  join_type: left_outer
+  relationship_type: many_to_one
+- name: b2b_to_mm
+  left_table: mm_journey
+  right_table: b2b_revenue
+  relationship_columns:
+  - left_column: mm_awb
     right_column: awb_no
   join_type: left_outer
   relationship_type: many_to_one
