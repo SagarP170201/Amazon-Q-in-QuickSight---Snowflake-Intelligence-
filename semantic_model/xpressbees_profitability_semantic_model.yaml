@@ -457,6 +457,241 @@ tables:
   primary_key:
     columns:
     - hub_name_zone
+- name: daily_load
+  description: Trip-level linehaul load details per AWB — loading/unloading cities, connection names, LH cost per shipment.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: DAILY_LOAD
+  dimensions:
+  - name: dl_awb
+    expr: AWB
+    description: AWB number
+    data_type: TEXT
+  - name: dl_mm_tripid
+    expr: MM_TRIPID
+    description: Mid-mile trip ID
+    data_type: TEXT
+  - name: dl_clientname
+    expr: CLIENTNAME
+    description: Client name
+    data_type: TEXT
+  - name: dl_connectionid
+    expr: '"connectionid"'
+    description: Connection ID
+    data_type: TEXT
+  - name: dl_loading_city
+    expr: '"Loading_city"'
+    description: Loading city
+    synonyms:
+    - from city
+    - origin city
+    data_type: TEXT
+  - name: dl_unloading_city
+    expr: '"Unloading_city"'
+    description: Unloading city
+    synonyms:
+    - to city
+    - destination city
+    data_type: TEXT
+  - name: dl_connection_name
+    expr: '"final_connection_name"'
+    description: Connection/route name
+    synonyms:
+    - route name
+    - connection
+    data_type: TEXT
+  - name: dl_depart_location
+    expr: '"DEPART_LOCATION (Loading)"'
+    description: Departure hub (loading)
+    data_type: TEXT
+  - name: dl_arrival_location
+    expr: '"ARRIVAL_LOCATION (UnLoading)"'
+    description: Arrival hub (unloading)
+    data_type: TEXT
+  - name: dl_originhub
+    expr: ORIGINHUB
+    description: Origin hub
+    data_type: TEXT
+  - name: dl_desthub
+    expr: DESTHUB
+    description: Destination hub
+    data_type: TEXT
+  - name: dl_stoppointhubname
+    expr: STOPPOINTHUBNAME
+    description: Stop point hub name
+    data_type: TEXT
+  time_dimensions:
+  - name: dl_trip_start_date
+    expr: TRY_TO_TIMESTAMP("Trip_start_date")
+    description: Trip start date
+    data_type: TIMESTAMP
+  - name: dl_trip_close_date
+    expr: TRY_TO_TIMESTAMP("Trip_close_date")
+    description: Trip close date
+    data_type: TIMESTAMP
+  facts:
+  - name: dl_tot_chrgwt
+    expr: TOT_CHRGWT
+    description: Billed weight per AWB on this trip
+    synonyms:
+    - load weight
+    - trip weight
+    data_type: NUMBER
+  - name: dl_tot_phywt
+    expr: TOT_PHYWT
+    description: Physical weight per AWB
+    data_type: NUMBER
+  - name: dl_tot_volwt
+    expr: TOT_VOLWT
+    description: Volumetric weight per AWB
+    data_type: NUMBER
+  - name: dl_lh_cost
+    expr: '"LH Cost"'
+    description: Linehaul cost allocated to this AWB
+    synonyms:
+    - linehaul cost per awb
+    data_type: NUMBER
+  - name: dl_stoppointorder
+    expr: '"stoppointorder"'
+    description: Stop point order in trip
+    data_type: NUMBER
+  metrics:
+  - name: dl_total_load
+    expr: SUM(TOT_CHRGWT)
+    description: Total load (billed weight) on trips
+  - name: dl_total_lh_cost
+    expr: SUM("LH Cost")
+    description: Total linehaul cost across trips
+  - name: dl_awb_count
+    expr: COUNT(DISTINCT AWB)
+    description: Unique AWBs on trips
+  - name: dl_lh_cpk
+    expr: SUM("LH Cost") / NULLIF(SUM(TOT_CHRGWT), 0)
+    description: Linehaul cost per kg
+  primary_key:
+    columns:
+    - dl_awb
+- name: weighted_utilization
+  description: Vehicle/trip-level utilization metrics — capacity, actual load, utilization %, trip cost, cost per kg.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: WEIGHTED_UTILIZATION
+  dimensions:
+  - name: wu_connection_name
+    expr: '"Final connection name"'
+    description: Connection/route name
+    synonyms:
+    - route
+    - connection
+    data_type: TEXT
+  - name: wu_lane
+    expr: '"Lane"'
+    description: Lane (origin-destination pair)
+    synonyms:
+    - od pair
+    - route lane
+    data_type: TEXT
+  - name: wu_route_type
+    expr: '"route_type"'
+    description: Route type (National/Regional)
+    synonyms:
+    - national regional
+    sample_values:
+    - National
+    - Regional
+    data_type: TEXT
+  - name: wu_load_unload_city
+    expr: '"load_unloadcity"'
+    description: Loading/unloading city
+    data_type: TEXT
+  - name: wu_vehicle_name
+    expr: '"vehiclename"'
+    description: Vehicle type/name
+    synonyms:
+    - vehicle
+    - truck type
+    data_type: TEXT
+  - name: wu_connectionid
+    expr: '"connectionid"'
+    description: Connection ID
+    data_type: TEXT
+  - name: wu_tripsheetno
+    expr: '"TripSheetNo"'
+    description: Trip sheet number
+    data_type: TEXT
+  - name: wu_vendor_name
+    expr: '"Vendor_Name"'
+    description: Vehicle vendor name
+    data_type: TEXT
+  - name: wu_route_mode
+    expr: '"route mode"'
+    description: Route mode
+    data_type: TEXT
+  - name: wu_dedicated_route
+    expr: '"Dedicated Route as per Mapping"'
+    description: Dedicated route mapping
+    data_type: TEXT
+  time_dimensions:
+  - name: wu_start_date
+    expr: TRY_TO_DATE("Start Date")
+    description: Trip start date
+    data_type: DATE
+  - name: wu_close_date
+    expr: TRY_TO_DATE("Close Date")
+    description: Trip close date
+    data_type: DATE
+  facts:
+  - name: wu_phy_wt
+    expr: TRY_TO_NUMBER("Phy Wt", 18, 2)
+    description: Physical weight loaded
+    data_type: NUMBER
+  - name: wu_vol_wt
+    expr: TRY_TO_NUMBER("Vol Wt", 18, 2)
+    description: Volumetric weight loaded
+    data_type: NUMBER
+  - name: wu_chg_wt
+    expr: TRY_TO_NUMBER("Chg Wt", 18, 2)
+    description: Charged weight loaded
+    data_type: NUMBER
+  - name: wu_phy_cap
+    expr: TRY_TO_NUMBER("Phy Cap", 18, 2)
+    description: Physical weight capacity
+    data_type: NUMBER
+  - name: wu_vol_cap
+    expr: TRY_TO_NUMBER("Vol Cap", 18, 2)
+    description: Volumetric weight capacity
+    data_type: NUMBER
+  - name: wu_trip_cost
+    expr: TRY_TO_NUMBER("Trip Cost", 18, 2)
+    description: Total trip cost
+    synonyms:
+    - vehicle cost
+    data_type: NUMBER
+  - name: wu_distance
+    expr: TRY_TO_NUMBER("Dist.", 18, 2)
+    description: Trip distance
+    data_type: NUMBER
+  metrics:
+  - name: wu_avg_phy_utilization
+    expr: AVG(TRY_TO_NUMBER(REPLACE("WU_Phy", '%', ''), 18, 2))
+    description: Average physical weight utilization %
+  - name: wu_avg_vol_utilization
+    expr: AVG(TRY_TO_NUMBER(REPLACE("WU_Vol", '%', ''), 18, 2))
+    description: Average volumetric utilization %
+  - name: wu_total_trip_cost
+    expr: SUM(TRY_TO_NUMBER("Trip Cost", 18, 2))
+    description: Total trip cost
+  - name: wu_trip_count
+    expr: COUNT(DISTINCT "TripSheetNo")
+    description: Number of unique trips
+  - name: wu_cost_per_kg
+    expr: SUM(TRY_TO_NUMBER("Trip Cost", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Chg Wt", 18, 2)), 0)
+    description: Trip cost per kg
+  primary_key:
+    columns:
+    - wu_tripsheetno
 relationships:
 - name: b2b_to_awb
   left_table: b2b_revenue
