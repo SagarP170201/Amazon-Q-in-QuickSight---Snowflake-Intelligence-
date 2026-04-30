@@ -30,8 +30,9 @@ Since there are no PUT commands or Python scripts, load data entirely through th
 3. Click **Load Data** (top right)
 4. Select warehouse: `SNOW_INTELLIGENCE_DEMO_WH`
 5. Drag-drop or browse to the CSV file for that table
-6. Select file format: `CSV_FORMAT` (already created in Step 1)
-7. Click **Load**
+6. Select file format: `CSV_FORMAT` (already created in Step 1 — uses `PARSE_HEADER = TRUE`)
+7. Set **Match by column name**: `CASE_INSENSITIVE` (this ensures column order in CSV doesn't matter)
+8. Click **Load**
 8. Repeat for each table, for each month
 
 **For each month (Oct'25 → Mar'26), load these 7 files:**
