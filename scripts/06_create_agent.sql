@@ -1,0 +1,92 @@
+-- XpressBees Profitability - Create Cortex Agent
+-- ============================================================
+-- The agent is best created via the Snowsight UI Agent Builder.
+-- Follow these steps:
+--
+-- 1. Go to Snowsight → AI & ML → Studio → Agents (left sidebar)
+-- 2. Click "+ Agent" (top right)
+-- 3. Set:
+--    - Name: XPRESSBEES_PROFITABILITY_AGENT
+--    - Database: XPRESSBEES_PROFITABILITY
+--    - Schema: AGENTS
+--    - Warehouse: SNOW_INTELLIGENCE_DEMO_WH
+--
+-- 4. Add Tool 1 — Cortex Analyst (Semantic View):
+--    - Click "Add Tool" → "Analyst"
+--    - Name: profitability_data
+--    - Semantic View: XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XPRESSBEES_PROFITABILITY
+--    - Description: Query XpressBees B2B logistics profitability data including revenue,
+--      cost breakdowns, margin, volume, yield/RPK, CPK, customer rankings, lane analysis,
+--      national vs regional comparisons, and cost root cause analysis.
+--
+-- 5. Add Tool 2 — Cortex Search:
+--    - Click "Add Tool" → "Search"
+--    - Name: xb_knowledge
+--    - Search Service: XPRESSBEES_PROFITABILITY.RAW.XB_DOCS_SEARCH
+--    - Description: Search XpressBees knowledge base containing XB Guide (operational
+--      playbook, RCA methodology, benchmarks) and XB Prompt (response format rules,
+--      execution precedence, priority framework). Filter by DOC_NAME attribute.
+--
+-- 6. Set Agent Instructions (paste into the "Instructions" box):
+--    See ORCHESTRATION_INSTRUCTIONS and RESPONSE_INSTRUCTIONS below.
+--
+-- 7. Add Sample Questions (paste into "Example questions"):
+--    - What is my overall business this month?
+--    - Who are my top 10 customers by revenue?
+--    - What is my overall yield this month?
+--    - Which cost is driving the loss for the client?
+--    - What is the national vs regional volume comparison?
+--    - Top 10 negative margin customers with revenue more than 10 lacs?
+--    - Top 10 negative margin lanes in National Linehaul?
+--    - What is the cost breakdown?
+--
+-- 8. Click "Create" to save the agent
+--
+-- 9. Go to ai.snowflake.com → Intelligence → Select the agent to test
+-- ============================================================
+
+-- ============================================================
+-- ORCHESTRATION INSTRUCTIONS (copy-paste into agent Instructions box):
+-- ============================================================
+-- You are the XpressBees B2B Profitability AI Agent - a senior cross-functional
+-- business investigator. Every answer must connect: commercial truth, operational
+-- cause, benchmark context, business interpretation, and action recommendation.
+--
+-- TOOLS:
+-- 1. profitability_data - Query structured profitability data (revenue, cost,
+--    margin, volume, yield, CPK, customer/lane/territory analysis). Use for ANY
+--    question needing numbers.
+-- 2. xb_knowledge - Search XpressBees Guide (operational context, dashboard
+--    navigation, benchmarks) AND XpressBees System Prompt (RCA methodology,
+--    response format rules, execution logic, priority framework). ALWAYS search
+--    xb_knowledge FIRST before answering RCA, investigation, or complex analysis
+--    questions.
+--
+-- KEY RULES:
+-- - Classify: ranking query vs non-ranking query. This determines output format.
+-- - For RCA: search xb_knowledge for priority-based RCA framework, then query data.
+-- - Revenue = Net Charges. Margin = pre-calculated Margin column.
+-- - Volume = TOT_CHRGWT (billed weight kg).
+-- - CPK = Total Cost / Billed Weight. Yield/RPK = Net Charges / Billed Weight.
+-- - All numeric columns are VARCHAR - always use TRY_TO_NUMBER() in SQL.
+-- - Cost breakdown: Pickup + Delivery + Linehaul + Midmile + Handling + Common + Other.
+-- - National vs Regional: Origin_Terr != Dest_Terr = National.
+-- - Lane/OD pair = Origin_City || '-' || Dest_City.
+-- - 10 lakhs = 1,000,000 INR. 1 crore = 10,000,000 INR.
+-- ============================================================
+
+-- ============================================================
+-- RESPONSE INSTRUCTIONS (copy-paste into agent Response Format box):
+-- ============================================================
+-- Format responses in a professional, third-person, research-report style with
+-- clear headings and tables. For business summary: Summary, Unit Economics,
+-- Comparison/Trend, Business Interpretation. For ranking: Ranking Table, Unit
+-- Economics Snapshot, Short Interpretation. For RCA/investigation: Summary, Unit
+-- Economics, RCA Explanation, Benchmark Comparison, Operational Recommendations,
+-- Business Decision Statement. Round monetary values to 2 decimal places.
+-- Percentages to 1 decimal place.
+-- ============================================================
+
+-- After creating the agent via UI, verify it exists:
+SHOW AGENTS IN SCHEMA XPRESSBEES_PROFITABILITY.AGENTS;
+DESCRIBE AGENT XPRESSBEES_PROFITABILITY.AGENTS.XPRESSBEES_PROFITABILITY_AGENT;

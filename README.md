@@ -2,30 +2,64 @@
 
 Migration of **XpressBees B2B Profitability AI Agent** from Amazon Q/QuickSight to Snowflake Intelligence.
 
+**Everything runs in Snowsight UI — no Python, CLI, or local tools required.**
+
 ---
 
-## Quick Start (Start Here)
+## Quick Start
 
-> **Prerequisites**: Snowflake account with `ACCOUNTADMIN` role, Python 3.8+, monthly data CSVs, XB Guide FINAL.docx, XB Prompt FINAL.docx.
->
-> ```bash
-> pip install -r requirements.txt   # installs snowflake-connector-python, python-docx
-> ```
+> **Prerequisites**: Snowflake account with `ACCOUNTADMIN` role, monthly data CSVs, XB Guide FINAL.docx, XB Prompt FINAL.docx.
 
 | Step | What | How | Time |
 |------|------|-----|------|
-| **1** | Create database, schemas, warehouse | Run `scripts/01_setup_database.sql` in Snowsight | 1 min |
-| **2** | Create all 9 tables | Run `scripts/02_create_tables.sql` in Snowsight | 1 min |
-| **3** | Upload & load data | Upload CSVs via SnowSQL (`PUT`) or Snowsight UI, then run `scripts/03_load_data.sql` per month (replace `<month>` with folder name). **Note: PUT commands cannot run in Snowsight — use SnowSQL CLI or upload via Snowsight UI.** | 10-30 min |
-| **4** | Deploy Semantic View | `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/04_deploy_semantic_view.py` | 1 min |
-| **5** | Create Cortex Search | Place both .docx files in current dir, run `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/05_create_cortex_search.py` | 2 min |
-| **6** | Create Cortex Agent | `SNOWFLAKE_CONNECTION_NAME=<conn> python3 scripts/06_create_agent.py` | 1 min |
-| **7** | Register in Snowflake Intelligence | Go to `ai.snowflake.com` → Intelligence → Create → Select `XPRESSBEES_PROFITABILITY_AGENT` | 1 min |
+| **1** | Create database, schemas, warehouse | Open Snowsight → SQL Worksheet → paste & run `scripts/01_setup_database.sql` | 1 min |
+| **2** | Create tables | SQL Worksheet → paste & run `scripts/02_create_tables.sql` | 1 min |
+| **3** | Upload & load data | Snowsight → Data → Add Data → Load Files into Table (drag-drop CSVs per table, per month) | 10-30 min |
+| **4** | Deploy Semantic View | SQL Worksheet → paste & run `scripts/04_deploy_semantic_view.sql` | 1 min |
+| **5** | Load knowledge docs | Extract text from .docx files → SQL Worksheet → paste & run `scripts/05_create_cortex_search.sql` (insert doc text where marked) | 5 min |
+| **6** | Create Cortex Agent | SQL Worksheet → paste & run `scripts/06_create_agent.sql` | 1 min |
+| **7** | Register in Intelligence | Go to `ai.snowflake.com` → Intelligence → Create → Select `XPRESSBEES_PROFITABILITY_AGENT` | 1 min |
 | **8** | Test | Ask: *"What is my overall business this month?"* | Done! |
 
-> **Note**: Replace `<conn>` with your Snowflake connection name. To find available connections, run `snow connection list` in your terminal.
+### Step 3 — Loading Data via Snowsight UI (Detailed)
 
-> **Data Loading**: For Oct'25–Mar'26, repeat Step 3 for each month. CSVs should match the column structure in `02_create_tables.sql`. Data is appended — do NOT truncate tables between months.
+Since there are no PUT commands or Python scripts, load data entirely through the Snowsight UI:
+
+1. Go to **Snowsight** → **Data** → **Databases** → `XPRESSBEES_PROFITABILITY` → `RAW`
+2. Click on a table (e.g., `B2B_REVENUE`)
+3. Click **Load Data** (top right)
+4. Select warehouse: `SNOW_INTELLIGENCE_DEMO_WH`
+5. Drag-drop or browse to the CSV file for that table
+6. Select file format: `CSV_FORMAT` (already created in Step 1)
+7. Click **Load**
+8. Repeat for each table, for each month
+
+**For each month (Oct'25 → Mar'26), load these 7 files:**
+
+| CSV File | Target Table |
+|----------|-------------|
+| B2B_Revenue.csv | B2B_REVENUE |
+| AWB_File.csv | AWB_FILE |
+| FM_Journey.csv | FM_JOURNEY |
+| LM_Journey.csv | LM_JOURNEY |
+| MM_Journey.csv | MM_JOURNEY |
+| Daily_Load.csv | DAILY_LOAD |
+| Weighted_Utilization.csv | WEIGHTED_UTILIZATION |
+
+**Dimension tables (load once, not per month):**
+
+| CSV File | Target Table |
+|----------|-------------|
+| Hub-city_mapping.csv | DIM_HUB_CITY |
+| Hub_to_zone_mapping.csv | DIM_HUB_TO_ZONE |
+
+### Step 5 — Loading Knowledge Docs (Detailed)
+
+1. Open `XB Guide FINAL.docx` and `XB Prompt FINAL.docx`
+2. Select All → Copy the full text from each document
+3. Open `scripts/05_create_cortex_search.sql` in a SQL Worksheet
+4. Replace the `<PASTE_XB_GUIDE_TEXT_HERE>` and `<PASTE_XB_PROMPT_TEXT_HERE>` placeholders with the copied text
+5. Run the script — it will chunk the text, load into DOC_CHUNKS, and create the Cortex Search Service
 
 ---
 
@@ -102,7 +136,7 @@ Migration of **XpressBees B2B Profitability AI Agent** from Amazon Q/QuickSight 
 | `WEIGHTED_UTILIZATION` | Weighted utilization metrics | (not in semantic view — for future use) |
 | `DIM_HUB_CITY` | Hub to city/territory mapping | HubName, HubCity, Territory |
 | `DIM_HUB_TO_ZONE` | Hub to zone mapping | hubname, hubzonename |
-| `DOC_CHUNKS` | Chunked XB Guide + XB Prompt docs | CHUNK_TEXT, DOC_NAME, CHUNK_INDEX |
+| `DOC_CHUNKS` | Chunked XB Guide + XB Prompt docs | CHUNK_TEXT, DOC_NAME, CHUNK_ID |
 
 ### Key Metrics
 
@@ -121,144 +155,7 @@ Migration of **XpressBees B2B Profitability AI Agent** from Amazon Q/QuickSight 
 - **National vs Regional**: `Origin_Terr != Dest_Terr` = National, same territory = Regional. Do NOT use Route column (it's "Surface" for all rows)
 - **10 lakhs = 1,000,000 INR**, **1 crore = 10,000,000 INR**
 
-## Setup Instructions
-
-### Prerequisites
-
-- Snowflake account with `ACCOUNTADMIN` role
-- Python 3.8+ with `snowflake-connector-python`
-- Source data files (monthly CSVs for each table)
-- XB Guide FINAL.docx and XB Prompt FINAL.docx
-
-### Step 1: Database and Schema Setup
-
-```sql
--- Run scripts/01_setup_database.sql
-CREATE DATABASE IF NOT EXISTS XPRESSBEES_PROFITABILITY;
-CREATE SCHEMA IF NOT EXISTS XPRESSBEES_PROFITABILITY.RAW;
-CREATE SCHEMA IF NOT EXISTS XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS;
-CREATE SCHEMA IF NOT EXISTS XPRESSBEES_PROFITABILITY.AGENTS;
-
-CREATE WAREHOUSE IF NOT EXISTS SNOW_INTELLIGENCE_DEMO_WH
-  WAREHOUSE_SIZE = 'MEDIUM' AUTO_SUSPEND = 300 AUTO_RESUME = TRUE;
-
--- Enable cross-region Cortex (required for ap-southeast region)
-ALTER ACCOUNT SET CORTEX_ENABLED_CROSS_REGION = 'AWS_US';
-```
-
-### Step 2: Create Tables and Load Data
-
-```sql
--- Run scripts/02_create_tables.sql
--- Then load data using scripts/03_load_data.sql
--- See scripts/ directory for complete SQL
-```
-
-### Step 3: Deploy Semantic View
-
-```bash
-# Run the deployment script
-SNOWFLAKE_CONNECTION_NAME=<your_connection> python3 scripts/04_deploy_semantic_view.py
-```
-
-### Step 4: Create Cortex Search Service
-
-```bash
-# Chunk the XB Guide and XB Prompt documents, then create search service
-SNOWFLAKE_CONNECTION_NAME=<your_connection> python3 scripts/05_create_cortex_search.py
-```
-
-### Step 5: Create Cortex Agent
-
-```bash
-# Create the agent with both tools
-SNOWFLAKE_CONNECTION_NAME=<your_connection> python3 scripts/06_create_agent.py
-```
-
-### Step 6: Register in Snowflake Intelligence
-
-1. Go to `ai.snowflake.com`
-2. Navigate to Intelligence → Create
-3. Select `XPRESSBEES_PROFITABILITY_AGENT`
-4. Test with: "What is my overall business this month?"
-
-## Scaling to Production (All 12 Months)
-
-### Phase 1: Load All Monthly Data
-
-For each month (Apr'25 → Mar'26):
-
-```sql
--- Upload files to stage
-PUT file:///path/to/<month>/B2B_Revenue.csv @RAW.DATA_STAGE/<month>/ AUTO_COMPRESS=FALSE OVERWRITE=TRUE;
--- Repeat for AWB_File, FM_Journey, LM_Journey, MM_Journey, Daily_Load, Weighted_Utilization
-
--- Load into tables (APPEND — do NOT truncate)
-COPY INTO RAW.B2B_REVENUE FROM @RAW.DATA_STAGE/<month>/B2B_Revenue.csv
-  FILE_FORMAT = RAW.CSV_FORMAT ON_ERROR = 'CONTINUE';
--- Repeat for each table
-```
-
-### Phase 2: Add Multi-Month VQRs
-
-The following 19 questions require multi-month data. Add VQRs to the semantic model YAML:
-
-| # | Question | Months Needed |
-|---|----------|---------------|
-| 1 | What was my business last month? | 2 |
-| 2 | What was my business in the last 3 months? | 3 |
-| 3 | What was my business this quarter? | 3 |
-| 4 | What is my YTD business? | 12 |
-| 5 | Top 20 uptrading customers (by revenue) Jan vs Dec | 2 |
-| 6 | Top 20 downtrading customers (by revenue) Jan vs Dec | 2 |
-| 7 | New customers added this month vs last month | 2 |
-| 8 | Which customers have potential for growth? | metadata |
-| 9 | Which customers' yield dropped last month vs prior month? | 2 |
-| 10 | Top 10 customers (>10L) whose yield dropped Jan vs Apr'25 | 10 |
-| 11 | Uptrading/downtrading status yesterday | daily |
-| 12 | Uptrading/downtrading last 7 days | daily |
-| 13 | YoY growth for top clients | 12+ |
-| 14 | Revenue/RPK/Yield/Volume trend Apr'25 to Jan'26 | 10 |
-| 15 | Trend of National vs Regional for top 10 customers | 10 |
-| 16 | Customers who went from negative to positive margin | 2+ |
-| 17 | Customers who went from positive to negative margin | 2+ |
-| 18 | How can I improve margin for a specific customer? | RCA |
-| 19 | What operational changes needed for margin improvement? | RCA |
-
-After adding VQRs, re-deploy:
-
-```bash
-SNOWFLAKE_CONNECTION_NAME=<your_connection> python3 scripts/04_deploy_semantic_view.py
-```
-
-### Phase 3: Test & Validate
-
-Test all 35 questions from the three tabs (Questions, Uday sir, Mayank sir). See `docs/test_questions.md` for the complete list.
-
-### Phase 4: Access & Governance
-
-```sql
--- Create roles
-CREATE ROLE IF NOT EXISTS XB_PROFITABILITY_VIEWER;
-CREATE ROLE IF NOT EXISTS XB_PROFITABILITY_ANALYST;
-
--- Grant database access
-GRANT USAGE ON DATABASE XPRESSBEES_PROFITABILITY TO ROLE XB_PROFITABILITY_VIEWER;
-GRANT USAGE ON SCHEMA XPRESSBEES_PROFITABILITY.RAW TO ROLE XB_PROFITABILITY_VIEWER;
-GRANT USAGE ON SCHEMA XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS TO ROLE XB_PROFITABILITY_VIEWER;
-GRANT USAGE ON SCHEMA XPRESSBEES_PROFITABILITY.AGENTS TO ROLE XB_PROFITABILITY_VIEWER;
-
--- Grant agent access
-GRANT USAGE ON AGENT XPRESSBEES_PROFITABILITY.AGENTS.XPRESSBEES_PROFITABILITY_AGENT TO ROLE XB_PROFITABILITY_VIEWER;
-
--- Grant warehouse
-GRANT USAGE ON WAREHOUSE SNOW_INTELLIGENCE_DEMO_WH TO ROLE XB_PROFITABILITY_VIEWER;
-
--- Assign to users
-GRANT ROLE XB_PROFITABILITY_VIEWER TO USER <username>;
-```
-
-## Handover Checklist (What's Done vs What's Remaining)
+## Handover Checklist
 
 ### Done (POC — Feb 2026 data)
 - [x] Database, schemas, warehouse, stages created
@@ -270,12 +167,25 @@ GRANT ROLE XB_PROFITABILITY_VIEWER TO USER <username>;
 - [x] 19 of 38 questions answerable and tested
 
 ### Remaining (Customer)
-- [ ] Load Oct'25 → Mar'26 data (6 months) using Step 3 above
-- [ ] Add 19 multi-month VQRs to `semantic_model/xpressbees_profitability_semantic_model.yaml` (see Phase 2 above)
-- [ ] Re-deploy semantic view after adding VQRs (`python3 scripts/04_deploy_semantic_view.py`)
+- [ ] Load Oct'25 → Mar'26 data (6 months) via Snowsight UI (Step 3 above)
+- [ ] Add 19 multi-month VQRs to `semantic_model/xpressbees_profitability_semantic_model.yaml`
+- [ ] Re-deploy semantic view after adding VQRs (re-run `scripts/04_deploy_semantic_view.sql`)
 - [ ] Test all 38 questions end-to-end (see `docs/test_questions.md`)
-- [ ] Set up RBAC roles and grants (see Phase 4 above)
+- [ ] Set up RBAC roles and grants (see below)
 - [ ] Establish monthly data refresh process
+
+### RBAC Setup (run in SQL Worksheet)
+
+```sql
+CREATE ROLE IF NOT EXISTS XB_PROFITABILITY_VIEWER;
+GRANT USAGE ON DATABASE XPRESSBEES_PROFITABILITY TO ROLE XB_PROFITABILITY_VIEWER;
+GRANT USAGE ON SCHEMA XPRESSBEES_PROFITABILITY.RAW TO ROLE XB_PROFITABILITY_VIEWER;
+GRANT USAGE ON SCHEMA XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS TO ROLE XB_PROFITABILITY_VIEWER;
+GRANT USAGE ON SCHEMA XPRESSBEES_PROFITABILITY.AGENTS TO ROLE XB_PROFITABILITY_VIEWER;
+GRANT USAGE ON AGENT XPRESSBEES_PROFITABILITY.AGENTS.XPRESSBEES_PROFITABILITY_AGENT TO ROLE XB_PROFITABILITY_VIEWER;
+GRANT USAGE ON WAREHOUSE SNOW_INTELLIGENCE_DEMO_WH TO ROLE XB_PROFITABILITY_VIEWER;
+GRANT ROLE XB_PROFITABILITY_VIEWER TO USER <username>;
+```
 
 ## File Structure
 
@@ -286,13 +196,14 @@ GRANT ROLE XB_PROFITABILITY_VIEWER TO USER <username>;
 ├── scripts/
 │   ├── 01_setup_database.sql          # Database, schema, warehouse setup
 │   ├── 02_create_tables.sql           # Table DDL for all 9 tables
-│   ├── 03_load_data.sql               # COPY INTO statements for data loading
-│   ├── 04_deploy_semantic_view.py     # Deploy/re-deploy semantic view
-│   ├── 05_create_cortex_search.py     # Chunk docs + create search service
-│   └── 06_create_agent.py             # Create cortex agent with 2 tools
+│   ├── 04_deploy_semantic_view.sql    # Deploy semantic view from YAML
+│   ├── 05_create_cortex_search.sql    # Chunk docs + create search service
+│   └── 06_create_agent.sql            # Create cortex agent with 2 tools
 └── docs/
-    └── test_questions.md              # All 35 test questions across 3 tabs
+    └── test_questions.md              # All 38 test questions across 3 tabs
 ```
+
+> **Note**: No Step 03 script — data loading is done via Snowsight UI drag-drop (see Step 3 above).
 
 ## Key Technical Learnings
 
@@ -302,7 +213,6 @@ GRANT ROLE XB_PROFITABILITY_VIEWER TO USER <username>;
 | Missing `data_type` in dimensions | Add `data_type: TEXT` to all dims, `NUMBER` to facts |
 | `primary_key` format error | Must be `primary_key: {columns: ["col"]}` (object, not string) |
 | `one_to_many` relationship type | Only `many_to_one` and `one_to_one` supported — swap left/right tables |
-| `$$` delimiter breaks YAML deploy | Use single-quoted escaped YAML via Python connector |
 | Agent instruction size limit (48K) | Put full docs in Cortex Search, keep agent instructions concise |
 | Route column = "Surface" for all rows | Use `Origin_Terr != Dest_Terr` for National vs Regional |
 | VARCHAR numeric columns | Always wrap in `TRY_TO_NUMBER()` for aggregations |
