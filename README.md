@@ -15,7 +15,7 @@ Migration of **XpressBees B2B Profitability AI Agent** from Amazon Q/QuickSight 
 | **1** | Create database, schemas, warehouse | Open Snowsight → SQL Worksheet → paste & run `scripts/01_setup_database.sql` | 1 min |
 | **2** | Create tables | SQL Worksheet → paste & run `scripts/02_create_tables.sql` | 1 min |
 | **3** | Upload & load data | Snowsight → Data → Add Data → Load Files into Table (drag-drop CSVs per table, per month) | 10-30 min |
-| **4** | Deploy Semantic View | SQL Worksheet → paste & run `scripts/04_deploy_semantic_view.sql` | 1 min |
+| **4** | Deploy Semantic View | Upload YAML to stage via Snowsight UI, then run `scripts/04_deploy_semantic_view.sql`. **To edit later**: use the Semantic View editor in Snowsight (AI & ML → Semantic Views) to add/modify dimensions, metrics, and VQRs directly in the UI. | 1 min |
 | **5** | Load knowledge docs | Extract text from .docx files → SQL Worksheet → paste & run `scripts/05_create_cortex_search.sql` (insert doc text where marked) | 5 min |
 | **6** | Create Cortex Agent | SQL Worksheet → paste & run `scripts/06_create_agent.sql` | 1 min |
 | **7** | Register in Intelligence | Go to `ai.snowflake.com` → Intelligence → Create → Select `XPRESSBEES_PROFITABILITY_AGENT` | 1 min |
@@ -168,7 +168,7 @@ Since there are no PUT commands or Python scripts, load data entirely through th
 
 ### Remaining (Customer)
 - [ ] Load Oct'25 → Mar'26 data (6 months) via Snowsight UI (Step 3 above)
-- [ ] Add 19 multi-month VQRs to `semantic_model/xpressbees_profitability_semantic_model.yaml`
+- [ ] Add 19 multi-month VQRs — use the Semantic View editor in Snowsight (AI & ML → Semantic Views → edit) to add VQRs directly in the UI, or edit the YAML and re-run `scripts/04_deploy_semantic_view.sql`
 - [ ] Re-deploy semantic view after adding VQRs (re-run `scripts/04_deploy_semantic_view.sql`)
 - [ ] Test all 38 questions end-to-end (see `docs/test_questions.md`)
 - [ ] Set up RBAC roles and grants (see below)
