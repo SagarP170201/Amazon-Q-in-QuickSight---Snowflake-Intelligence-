@@ -14,26 +14,79 @@ Migration of **XpressBees B2B Profitability AI Agent** from Amazon Q/QuickSight 
 |------|------|-----|------|
 | **1** | Create database, schemas, warehouse | Open Snowsight → SQL Worksheet → paste & run `scripts/01_setup_database.sql` | 1 min |
 | **2** | Create tables | SQL Worksheet → paste & run `scripts/02_create_tables.sql` | 1 min |
-| **3** | Upload & load data | Snowsight → Data → Add Data → Load Files into Table (drag-drop CSVs per table, per month) | 10-30 min |
+| **3** | Upload & load data | Upload CSVs to `DATA_STAGE` via Snowsight UI, then run COPY INTO from SQL Worksheet (see Step 3 below). Files stay on stage for re-loading/debugging. | 10-30 min |
 | **4** | Deploy Semantic View | Upload YAML to stage via Snowsight UI, then run `scripts/04_deploy_semantic_view.sql`. **To edit later**: use the Semantic View editor in Snowsight (AI & ML → Semantic Views) to add/modify dimensions, metrics, and VQRs directly in the UI. | 1 min |
 | **5** | Load knowledge docs | Extract text from .docx files → SQL Worksheet → paste & run `scripts/05_create_cortex_search.sql` (insert doc text where marked) | 5 min |
 | **6** | Create Cortex Agent | SQL Worksheet → paste & run `scripts/06_create_agent.sql` | 1 min |
 | **7** | Register in Intelligence | Go to `ai.snowflake.com` → Intelligence → Create → Select `XPRESSBEES_PROFITABILITY_AGENT` | 1 min |
 | **8** | Test | Ask: *"What is my overall business this month?"* | Done! |
 
-### Step 3 — Loading Data via Snowsight UI (Detailed)
+### Step 3 — Loading Data (Stage First, Then COPY INTO)
 
-Since there are no PUT commands or Python scripts, load data entirely through the Snowsight UI:
+Upload CSVs to **internal stage first**, then COPY INTO tables. Files are retained on stage for re-loading, debugging, or deletion.
 
-1. Go to **Snowsight** → **Data** → **Databases** → `XPRESSBEES_PROFITABILITY` → `RAW`
-2. Click on a table (e.g., `B2B_REVENUE`)
-3. Click **Load Data** (top right)
-4. Select warehouse: `SNOW_INTELLIGENCE_DEMO_WH`
-5. Drag-drop or browse to the CSV file for that table
-6. Select file format: `CSV_FORMAT` (already created in Step 1 — uses `PARSE_HEADER = TRUE`)
-7. Set **Match by column name**: `CASE_INSENSITIVE` (this ensures column order in CSV doesn't matter)
-8. Click **Load**
-8. Repeat for each table, for each month
+**Step 3a: Upload CSVs to Stage**
+1. Go to **Snowsight** → **Data** → **Databases** → `XPRESSBEES_PROFITABILITY` → `RAW` → **Stages** → `DATA_STAGE`
+2. Click **+ Files** (top right)
+3. Create a folder for each month (e.g., `october_2025`, `november_2025`, etc.)
+4. Upload all 7 CSV files for that month into the folder
+5. Repeat for each month
+
+**Step 3b: COPY INTO tables from stage**
+
+Run in a SQL Worksheet — replace `<month>` with the folder name (e.g., `october_2025`):
+
+```sql
+USE DATABASE XPRESSBEES_PROFITABILITY;
+USE SCHEMA RAW;
+USE WAREHOUSE SNOW_INTELLIGENCE_DEMO_WH;
+
+COPY INTO B2B_REVENUE FROM @DATA_STAGE/<month>/B2B_Revenue.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+
+COPY INTO AWB_FILE FROM @DATA_STAGE/<month>/AWB_File.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+
+COPY INTO FM_JOURNEY FROM @DATA_STAGE/<month>/FM_Journey.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+
+COPY INTO LM_JOURNEY FROM @DATA_STAGE/<month>/LM_Journey.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+
+COPY INTO MM_JOURNEY FROM @DATA_STAGE/<month>/MM_Journey.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+
+COPY INTO DAILY_LOAD FROM @DATA_STAGE/<month>/Daily_Load.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+
+COPY INTO WEIGHTED_UTILIZATION FROM @DATA_STAGE/<month>/Weighted_Utilization.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+```
+
+**Dimension tables (upload once to stage root, load once):**
+
+```sql
+COPY INTO DIM_HUB_CITY FROM @DATA_STAGE/Hub-city_mapping.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+
+COPY INTO DIM_HUB_TO_ZONE FROM @DATA_STAGE/Hub_to_zone_mapping.csv
+  FILE_FORMAT = CSV_FORMAT MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE ON_ERROR = 'CONTINUE';
+```
+
+**Verify:**
+```sql
+SELECT 'B2B_REVENUE' AS tbl, COUNT(*) AS rows FROM B2B_REVENUE
+UNION ALL SELECT 'AWB_FILE', COUNT(*) FROM AWB_FILE
+UNION ALL SELECT 'FM_JOURNEY', COUNT(*) FROM FM_JOURNEY
+UNION ALL SELECT 'LM_JOURNEY', COUNT(*) FROM LM_JOURNEY
+UNION ALL SELECT 'MM_JOURNEY', COUNT(*) FROM MM_JOURNEY
+UNION ALL SELECT 'DAILY_LOAD', COUNT(*) FROM DAILY_LOAD
+UNION ALL SELECT 'WEIGHTED_UTILIZATION', COUNT(*) FROM WEIGHTED_UTILIZATION
+UNION ALL SELECT 'DIM_HUB_CITY', COUNT(*) FROM DIM_HUB_CITY
+UNION ALL SELECT 'DIM_HUB_TO_ZONE', COUNT(*) FROM DIM_HUB_TO_ZONE;
+```
+
+> **Why stage first?** Files are retained — you can re-load, debug, or delete and re-ingest anytime. `LIST @DATA_STAGE` shows all uploaded files. COPY INTO tracks loaded files and won't double-load.
 
 **For each month (Oct'25 → Mar'26), load these 7 files:**
 
