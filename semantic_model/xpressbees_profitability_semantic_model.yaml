@@ -881,5 +881,321 @@ verified_queries:
     HAVING SUM(TRY_TO_NUMBER("Margin", 18, 2)) > 0
     ORDER BY margin DESC
     LIMIT 10
+- name: business_last_month
+  question: What was my business last month?
+  sql: |
+    SELECT COUNT("AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue,
+      SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct,
+      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+- name: business_last_3_months
+  question: What was my business in the last 3 months?
+  sql: |
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+      COUNT("AWB No") AS shipments, COUNT(DISTINCT "Client Name") AS customers,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin,
+      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('month', -3, CURRENT_DATE())
+    GROUP BY month ORDER BY month
+- name: business_this_quarter
+  question: What was my business this quarter?
+  sql: |
+    SELECT COUNT("AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin,
+      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE DATE_TRUNC('quarter', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('quarter', CURRENT_DATE())
+- name: business_ytd
+  question: What is my YTD business?
+  sql: |
+    SELECT COUNT("AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin,
+      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE)) = YEAR(CURRENT_DATE())
+- name: top20_uptrading_customers
+  question: Top 20 uptrading customers by revenue this month vs last month
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", t.revenue AS current_revenue, l.revenue AS prev_revenue,
+      t.revenue - COALESCE(l.revenue, 0) AS revenue_change,
+      (t.revenue - COALESCE(l.revenue, 0)) / NULLIF(l.revenue, 0) * 100 AS pct_change
+    FROM this_month t LEFT JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE t.revenue > COALESCE(l.revenue, 0)
+    ORDER BY revenue_change DESC LIMIT 20
+- name: top20_downtrading_customers
+  question: Top 20 downtrading customers by revenue this month vs last month
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT l."Client Name", COALESCE(t.revenue, 0) AS current_revenue, l.revenue AS prev_revenue,
+      COALESCE(t.revenue, 0) - l.revenue AS revenue_change,
+      (COALESCE(t.revenue, 0) - l.revenue) / NULLIF(l.revenue, 0) * 100 AS pct_change
+    FROM last_month l LEFT JOIN this_month t ON l."Client Name" = t."Client Name"
+    WHERE COALESCE(t.revenue, 0) < l.revenue
+    ORDER BY revenue_change ASC LIMIT 20
+- name: new_customers_this_month
+  question: How many new customers have been added this month?
+  sql: |
+    WITH current_customers AS (
+      SELECT DISTINCT "Client Name"
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+    ),
+    prev_customers AS (
+      SELECT DISTINCT "Client Name"
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) < DATE_TRUNC('month', CURRENT_DATE())
+    )
+    SELECT c."Client Name", SUM(TRY_TO_NUMBER(b."Net Charges", 18, 2)) AS revenue
+    FROM current_customers c
+    LEFT JOIN prev_customers p ON c."Client Name" = p."Client Name"
+    JOIN XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE b ON c."Client Name" = b."Client Name"
+      AND DATE_TRUNC('month', TRY_TO_TIMESTAMP(b.PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+    WHERE p."Client Name" IS NULL
+    GROUP BY c."Client Name" ORDER BY revenue DESC
+- name: yield_dropped_mom
+  question: Which customers yield dropped this month vs last month?
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name",
+        SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
+    ),
+    last_month AS (
+      SELECT "Client Name",
+        SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
+    )
+    SELECT t."Client Name", t.yield AS current_yield, l.yield AS prev_yield,
+      t.yield - l.yield AS yield_change,
+      (t.yield - l.yield) / NULLIF(l.yield, 0) * 100 AS pct_change
+    FROM this_month t JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE t.yield < l.yield
+    ORDER BY yield_change ASC LIMIT 10
+- name: revenue_trend_monthly
+  question: Revenue, RPK, Yield, Volume trend by month
+  sql: |
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
+      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield_rpk,
+      SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS cpk
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    GROUP BY month ORDER BY month
+- name: national_vs_regional_trend
+  question: Trend of National vs Regional business by month
+  sql: |
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+      CASE WHEN "Origin_Terr" != "Dest_Terr" THEN 'National' ELSE 'Regional' END AS route_type,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
+      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    GROUP BY month, route_type ORDER BY month, route_type
+- name: yoy_growth_top_clients
+  question: YoY growth for top clients
+  sql: |
+    WITH this_year AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE)) = YEAR(CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_year AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE)) = YEAR(CURRENT_DATE()) - 1
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", t.revenue AS current_year, l.revenue AS last_year,
+      (t.revenue - COALESCE(l.revenue, 0)) / NULLIF(l.revenue, 0) * 100 AS yoy_growth_pct
+    FROM this_year t LEFT JOIN last_year l ON t."Client Name" = l."Client Name"
+    ORDER BY t.revenue DESC LIMIT 20
+- name: negative_to_positive_margin
+  question: Customers who went from negative margin to positive margin
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", l.margin AS prev_margin, t.margin AS current_margin,
+      t.margin - l.margin AS margin_improvement
+    FROM this_month t JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE l.margin < 0 AND t.margin > 0
+    ORDER BY margin_improvement DESC
+- name: positive_to_negative_margin
+  question: Customers who went from positive margin to negative margin
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", l.margin AS prev_margin, t.margin AS current_margin,
+      t.margin - l.margin AS margin_decline
+    FROM this_month t JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE l.margin > 0 AND t.margin < 0
+    ORDER BY margin_decline ASC
+- name: top10_yield_dropped_vs_6months_ago
+  question: Top 10 customers whose yield dropped vs 6 months ago
+  sql: |
+    WITH current AS (
+      SELECT "Client Name",
+        SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
+    ),
+    six_months_ago AS (
+      SELECT "Client Name",
+        SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -6, CURRENT_DATE()))
+      GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
+    )
+    SELECT c."Client Name", c.yield AS current_yield, s.yield AS prev_yield,
+      c.yield - s.yield AS yield_change,
+      (c.yield - s.yield) / NULLIF(s.yield, 0) * 100 AS pct_change
+    FROM current c JOIN six_months_ago s ON c."Client Name" = s."Client Name"
+    WHERE c.yield < s.yield
+    ORDER BY yield_change ASC LIMIT 10
+- name: national_regional_trend_top10
+  question: Trend of National vs Regional for top 10 customers by month
+  sql: |
+    WITH top10 AS (
+      SELECT "Client Name"
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      GROUP BY "Client Name" ORDER BY SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) DESC LIMIT 10
+    )
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(b.PICKUPDATE)) AS month,
+      b."Client Name",
+      CASE WHEN b."Origin_Terr" != b."Dest_Terr" THEN 'National' ELSE 'Regional' END AS route_type,
+      SUM(TRY_TO_NUMBER(b."Net Charges", 18, 2)) AS revenue,
+      SUM(TRY_TO_NUMBER(b."TOT_CHRGWT", 18, 4)) AS volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE b
+    JOIN top10 t ON b."Client Name" = t."Client Name"
+    GROUP BY month, b."Client Name", route_type
+    ORDER BY month, b."Client Name", route_type
+- name: uptrading_last_7_days
+  question: What is the uptrading status in the last 7 days?
+  sql: |
+    WITH last_7 AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    prev_7 AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -14, CURRENT_DATE())
+        AND TRY_TO_TIMESTAMP(PICKUPDATE) < DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    )
+    SELECT l."Client Name", l.revenue AS last_7d_revenue, p.revenue AS prev_7d_revenue,
+      l.revenue - COALESCE(p.revenue, 0) AS change,
+      CASE WHEN l.revenue > COALESCE(p.revenue, 0) THEN 'Uptrading' ELSE 'Downtrading' END AS status
+    FROM last_7 l LEFT JOIN prev_7 p ON l."Client Name" = p."Client Name"
+    ORDER BY change DESC LIMIT 20
+- name: downtrading_last_7_days
+  question: What is the downtrading status in the last 7 days?
+  sql: |
+    WITH last_7 AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    prev_7 AS (
+      SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -14, CURRENT_DATE())
+        AND TRY_TO_TIMESTAMP(PICKUPDATE) < DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    )
+    SELECT p."Client Name", COALESCE(l.revenue, 0) AS last_7d_revenue, p.revenue AS prev_7d_revenue,
+      COALESCE(l.revenue, 0) - p.revenue AS change
+    FROM prev_7 p LEFT JOIN last_7 l ON p."Client Name" = l."Client Name"
+    WHERE COALESCE(l.revenue, 0) < p.revenue
+    ORDER BY change ASC LIMIT 20
+- name: margin_improvement_rca
+  question: How can I improve margin for a customer?
+  sql: |
+    SELECT "Client Name",
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
+      SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin,
+      SUM(TRY_TO_NUMBER("Pickup Cost", 18, 2)) AS pickup_cost,
+      SUM(TRY_TO_NUMBER("Delivery Cost", 18, 2)) AS delivery_cost,
+      SUM(TRY_TO_NUMBER("Linehaul Cost", 18, 2)) AS linehaul_cost,
+      SUM(TRY_TO_NUMBER("Midmile Cost", 18, 2)) AS midmile_cost,
+      SUM(TRY_TO_NUMBER("Handling Cost", 18, 2)) AS handling_cost,
+      SUM(TRY_TO_NUMBER("Common Costs", 18, 2)) AS common_costs,
+      SUM(TRY_TO_NUMBER("Other Costs", 18, 2)) AS other_costs,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield_rpk,
+      SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS cpk
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE "Client Name" = '<CLIENT_NAME>'
+    GROUP BY "Client Name"
+- name: margin_trend_by_customer
+  question: What is the margin trend for a customer by month?
+  sql: |
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin,
+      SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct,
+      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE "Client Name" = '<CLIENT_NAME>'
+    GROUP BY month ORDER BY month
 module_custom_instructions:
   sql_generation: 'Revenue = Net Charges column. Margin = pre-calculated Margin column. Margin% = SUM(Margin)/NULLIF(SUM(Net Charges),0)*100. CPK = SUM(Total Cost)/NULLIF(SUM(TOT_CHRGWT),0). Yield/RPK = SUM(Net Charges)/NULLIF(SUM(TOT_CHRGWT),0). Volume = TOT_CHRGWT (billed weight kg). National vs Regional: National means Origin_Terr != Dest_Terr (cross-territory). Regional means Origin_Terr = Dest_Terr (same territory). Do NOT use Route column for national/regional — it only has Surface. Top N: include revenue, margin, volume. 10 lakhs = 1000000. All numeric columns are VARCHAR, always use TRY_TO_NUMBER() for aggregations. Cost RCA: break Total Cost into Pickup, Delivery, Linehaul, Midmile, Handling, Common, Other costs.'
