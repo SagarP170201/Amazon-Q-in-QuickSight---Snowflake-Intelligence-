@@ -1088,7 +1088,7 @@ verified_queries:
 - name: top10_yield_dropped_vs_6months_ago
   question: Top 10 customers whose yield dropped vs 6 months ago
   sql: |
-    WITH current AS (
+    WITH curr_month AS (
       SELECT "Client Name",
         SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
@@ -1105,7 +1105,7 @@ verified_queries:
     SELECT c."Client Name", c.yield AS current_yield, s.yield AS prev_yield,
       c.yield - s.yield AS yield_change,
       (c.yield - s.yield) / NULLIF(s.yield, 0) * 100 AS pct_change
-    FROM current c JOIN six_months_ago s ON c."Client Name" = s."Client Name"
+    FROM curr_month c JOIN six_months_ago s ON c."Client Name" = s."Client Name"
     WHERE c.yield < s.yield
     ORDER BY yield_change ASC LIMIT 10
 - name: national_regional_trend_top10
