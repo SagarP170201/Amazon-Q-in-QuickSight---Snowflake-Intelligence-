@@ -636,7 +636,7 @@ tables:
     - route lane
     data_type: TEXT
   - name: wu_route_type
-    expr: '"Route type"'
+    expr: '"route_type"'
     description: Route type (National/Regional)
     synonyms:
     - national regional
