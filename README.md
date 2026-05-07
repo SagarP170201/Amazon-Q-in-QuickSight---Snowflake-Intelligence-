@@ -259,6 +259,74 @@ GRANT ROLE XB_PROFITABILITY_VIEWER TO USER <username>;
 
 > **Note**: No Step 03 script — data loading is done via Snowsight UI drag-drop (see Step 3 above).
 
+## VQR Validation Guide
+
+The 35 Verified Queries (VQRs) in the semantic view are **syntactically valid SQL templates**, but they have NOT been validated against ground truth. Your domain team must verify them before considering them production-ready.
+
+### Why Manual Validation is Required
+
+- VQRs were built from sample data (few months), not the full dataset
+- "Verified" in Snowflake means **human-approved** — the system does not auto-validate correctness
+- Only your team knows what the "right answer" should be (compare against existing QuickSight/Amazon Q reports)
+
+### How to Validate (Two Approaches)
+
+#### Approach A: SQL Worksheet (Recommended for Bulk Validation)
+
+1. Open a **Snowsight SQL Worksheet**
+2. Copy a VQR's SQL from the YAML file (under each `verified_queries:` → `sql:` field)
+3. Paste and run in the worksheet
+4. Compare the output against your source-of-truth report (QuickSight, Excel, etc.)
+5. If results match → VQR is validated ✅
+6. If results don't match → fix the SQL in the YAML or remove the VQR
+
+#### Approach B: Snowflake Intelligence Chat (Tests Full AI Pipeline)
+
+1. Open **Snowflake Intelligence** → Select the agent
+2. Ask the natural language question (the `question:` field from the VQR)
+3. Check if the AI-generated answer matches your expectations
+4. This tests both the VQR matching AND the AI interpretation
+
+#### Approach C: UI Semantic View Editor (Guided Experience)
+
+1. Go to **Snowsight** → **AI & ML** → **Semantic Views**
+2. Open `XPRESSBEES_PROFITABILITY`
+3. Navigate to **Verified Queries** tab
+4. Add/edit VQRs interactively with built-in validation flow
+5. You can copy SQL from our YAML into the UI editor for guided validation
+
+### Validation Checklist
+
+| # | Action | Status |
+|---|--------|--------|
+| 1 | Load ALL months of data into tables | ☐ |
+| 2 | Run 3-4 VQRs in worksheet, compare to QuickSight reports | ☐ |
+| 3 | If results match, proceed to bulk validate remaining VQRs | ☐ |
+| 4 | Remove or fix any VQR that returns incorrect results | ☐ |
+| 5 | Test via Snowflake Intelligence chat for natural language accuracy | ☐ |
+
+### Header/Column Validation (Before Loading New Months)
+
+If loading data for months you haven't tested before, verify CSV headers match table columns:
+
+```sql
+-- Check table columns
+SELECT COLUMN_NAME FROM XPRESSBEES_PROFITABILITY.INFORMATION_SCHEMA.COLUMNS
+WHERE TABLE_SCHEMA = 'RAW' AND TABLE_NAME = '<TABLE_NAME>'
+ORDER BY ORDINAL_POSITION;
+
+-- If COPY INTO fails with column mismatch, compare CSV headers vs table DDL
+-- Fix with: ALTER TABLE ... RENAME COLUMN "old_name" TO "new_name";
+```
+
+### Important Notes
+
+- VQRs using relative dates (`DATEADD(MONTH, -3, CURRENT_DATE())`) will return different results depending on when you run them — this is expected
+- If a VQR returns 0 rows, it likely means that month's data hasn't been loaded yet
+- `TRY_TO_NUMBER()` will return NULL for non-numeric values — check for unexpected NULLs in aggregations
+
+---
+
 ## Key Technical Learnings
 
 | Issue | Fix |
