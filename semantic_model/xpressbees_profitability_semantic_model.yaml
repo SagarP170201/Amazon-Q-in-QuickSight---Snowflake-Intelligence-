@@ -123,19 +123,19 @@ tables:
     data_type: TEXT
   time_dimensions:
   - name: pickup_date
-    expr: TRY_TO_TIMESTAMP("PICKUPDATE")
+    expr: TRY_TO_TIMESTAMP("PICKUPDATE", 'MM/DD/YYYY')
     description: Shipment pickup date
     data_type: TIMESTAMP
     synonyms:
     - pickup date
   - name: delivery_date
-    expr: TRY_TO_DATE("Del Date")
+    expr: TRY_TO_DATE("Del Date", 'MM/DD/YYYY')
     description: Delivery date
     data_type: DATE
     synonyms:
     - del date
   - name: inscan_date
-    expr: TRY_TO_TIMESTAMP("InScan Date")
+    expr: TRY_TO_TIMESTAMP("InScan Date", 'MM/DD/YYYY HH24:MI')
     description: InScan date
     data_type: TIMESTAMP
   facts:
@@ -322,7 +322,7 @@ tables:
     data_type: TEXT
   time_dimensions:
   - name: pdd
-    expr: TRY_TO_TIMESTAMP("pdd")
+    expr: TRY_TO_TIMESTAMP("pdd", 'MM/DD/YYYY')
     description: Promised delivery date
     data_type: TIMESTAMP
   primary_key:
@@ -357,7 +357,7 @@ tables:
     data_type: TEXT
   time_dimensions:
   - name: pickupdate
-    expr: TRY_TO_TIMESTAMP("PICKUPDATE")
+    expr: TRY_TO_TIMESTAMP("PICKUPDATE", 'MM/DD/YYYY')
     description: Pickup date
     data_type: TIMESTAMP
   primary_key:
@@ -396,7 +396,7 @@ tables:
     data_type: TEXT
   time_dimensions:
   - name: deliverydatetime
-    expr: TRY_TO_TIMESTAMP("DELIVERYDATETIME")
+    expr: TRY_TO_TIMESTAMP("DELIVERYDATETIME", 'MM/DD/YYYY HH24:MI')
     description: Delivery date and time
     data_type: TIMESTAMP
   facts:
@@ -565,11 +565,11 @@ tables:
     data_type: TEXT
   time_dimensions:
   - name: dl_trip_start_date
-    expr: TRY_TO_TIMESTAMP("Trip_start_date")
+    expr: TRY_TO_TIMESTAMP("Trip_start_date", 'MM/DD/YYYY HH24:MI')
     description: Trip start date
     data_type: TIMESTAMP
   - name: dl_trip_close_date
-    expr: TRY_TO_TIMESTAMP("Trip_close_date")
+    expr: TRY_TO_TIMESTAMP("Trip_close_date", 'MM/DD/YYYY HH24:MI')
     description: Trip close date
     data_type: TIMESTAMP
   facts:
@@ -673,11 +673,11 @@ tables:
     data_type: TEXT
   time_dimensions:
   - name: wu_start_date
-    expr: TRY_TO_DATE("Start Date")
+    expr: TRY_TO_DATE("Start Date", 'MM/DD/YYYY')
     description: Trip start date
     data_type: DATE
   - name: wu_close_date
-    expr: TRY_TO_DATE("Close Date")
+    expr: TRY_TO_DATE("Close Date", 'MM/DD/YYYY')
     description: Trip close date
     data_type: DATE
   facts:
@@ -891,17 +891,17 @@ verified_queries:
       SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct,
       SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg
     FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-    WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+    WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
 - name: business_last_3_months
   question: What was my business in the last 3 months?
   sql: |
-    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) AS month,
       COUNT("AWB No") AS shipments, COUNT(DISTINCT "Client Name") AS customers,
       SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
       SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin,
       SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg
     FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-    WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('month', -3, CURRENT_DATE())
+    WHERE TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') >= DATEADD('month', -3, CURRENT_DATE())
     GROUP BY month ORDER BY month
 - name: business_this_quarter
   question: What was my business this quarter?
@@ -911,7 +911,7 @@ verified_queries:
       SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin,
       SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg
     FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-    WHERE DATE_TRUNC('quarter', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('quarter', CURRENT_DATE())
+    WHERE DATE_TRUNC('quarter', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('quarter', CURRENT_DATE())
 - name: business_ytd
   question: What is my YTD business?
   sql: |
@@ -920,20 +920,20 @@ verified_queries:
       SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin,
       SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg
     FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-    WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE)) = YEAR(CURRENT_DATE())
+    WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = YEAR(CURRENT_DATE())
 - name: top20_uptrading_customers
   question: Top 20 uptrading customers by revenue this month vs last month
   sql: |
     WITH this_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
       GROUP BY "Client Name"
     ),
     last_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
       GROUP BY "Client Name"
     )
     SELECT t."Client Name", t.revenue AS current_revenue, l.revenue AS prev_revenue,
@@ -948,13 +948,13 @@ verified_queries:
     WITH this_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
       GROUP BY "Client Name"
     ),
     last_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
       GROUP BY "Client Name"
     )
     SELECT l."Client Name", COALESCE(t.revenue, 0) AS current_revenue, l.revenue AS prev_revenue,
@@ -969,18 +969,18 @@ verified_queries:
     WITH current_customers AS (
       SELECT DISTINCT "Client Name"
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
     ),
     prev_customers AS (
       SELECT DISTINCT "Client Name"
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) < DATE_TRUNC('month', CURRENT_DATE())
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') < DATE_TRUNC('month', CURRENT_DATE())
     )
     SELECT c."Client Name", SUM(TRY_TO_NUMBER(b."Net Charges", 18, 2)) AS revenue
     FROM current_customers c
     LEFT JOIN prev_customers p ON c."Client Name" = p."Client Name"
     JOIN XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE b ON c."Client Name" = b."Client Name"
-      AND DATE_TRUNC('month', TRY_TO_TIMESTAMP(b.PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      AND DATE_TRUNC('month', TRY_TO_TIMESTAMP(b.PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
     WHERE p."Client Name" IS NULL
     GROUP BY c."Client Name" ORDER BY revenue DESC
 - name: yield_dropped_mom
@@ -990,14 +990,14 @@ verified_queries:
       SELECT "Client Name",
         SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
       GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
     ),
     last_month AS (
       SELECT "Client Name",
         SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
       GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
     )
     SELECT t."Client Name", t.yield AS current_yield, l.yield AS prev_yield,
@@ -1009,7 +1009,7 @@ verified_queries:
 - name: revenue_trend_monthly
   question: Revenue, RPK, Yield, Volume trend by month
   sql: |
-    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) AS month,
       SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
       SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg,
       SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield_rpk,
@@ -1019,7 +1019,7 @@ verified_queries:
 - name: national_vs_regional_trend
   question: Trend of National vs Regional business by month
   sql: |
-    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) AS month,
       CASE WHEN "Origin_Terr" != "Dest_Terr" THEN 'National' ELSE 'Regional' END AS route_type,
       SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
       SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg,
@@ -1032,13 +1032,13 @@ verified_queries:
     WITH this_year AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE)) = YEAR(CURRENT_DATE())
+      WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = YEAR(CURRENT_DATE())
       GROUP BY "Client Name"
     ),
     last_year AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE)) = YEAR(CURRENT_DATE()) - 1
+      WHERE YEAR(TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = YEAR(CURRENT_DATE()) - 1
       GROUP BY "Client Name"
     )
     SELECT t."Client Name", t.revenue AS current_year, l.revenue AS last_year,
@@ -1051,13 +1051,13 @@ verified_queries:
     WITH this_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
       GROUP BY "Client Name"
     ),
     last_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
       GROUP BY "Client Name"
     )
     SELECT t."Client Name", l.margin AS prev_margin, t.margin AS current_margin,
@@ -1071,13 +1071,13 @@ verified_queries:
     WITH this_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
       GROUP BY "Client Name"
     ),
     last_month AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
       GROUP BY "Client Name"
     )
     SELECT t."Client Name", l.margin AS prev_margin, t.margin AS current_margin,
@@ -1092,14 +1092,14 @@ verified_queries:
       SELECT "Client Name",
         SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', CURRENT_DATE())
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', CURRENT_DATE())
       GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
     ),
     six_months_ago AS (
       SELECT "Client Name",
         SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) = DATE_TRUNC('month', DATEADD('month', -6, CURRENT_DATE()))
+      WHERE DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) = DATE_TRUNC('month', DATEADD('month', -6, CURRENT_DATE()))
       GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
     )
     SELECT c."Client Name", c.yield AS current_yield, s.yield AS prev_yield,
@@ -1116,7 +1116,7 @@ verified_queries:
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
       GROUP BY "Client Name" ORDER BY SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) DESC LIMIT 10
     )
-    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(b.PICKUPDATE)) AS month,
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(b.PICKUPDATE, 'MM/DD/YYYY')) AS month,
       b."Client Name",
       CASE WHEN b."Origin_Terr" != b."Dest_Terr" THEN 'National' ELSE 'Regional' END AS route_type,
       SUM(TRY_TO_NUMBER(b."Net Charges", 18, 2)) AS revenue,
@@ -1131,14 +1131,14 @@ verified_queries:
     WITH last_7 AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -7, CURRENT_DATE())
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') >= DATEADD('day', -7, CURRENT_DATE())
       GROUP BY "Client Name"
     ),
     prev_7 AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -14, CURRENT_DATE())
-        AND TRY_TO_TIMESTAMP(PICKUPDATE) < DATEADD('day', -7, CURRENT_DATE())
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') >= DATEADD('day', -14, CURRENT_DATE())
+        AND TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') < DATEADD('day', -7, CURRENT_DATE())
       GROUP BY "Client Name"
     )
     SELECT l."Client Name", l.revenue AS last_7d_revenue, p.revenue AS prev_7d_revenue,
@@ -1152,14 +1152,14 @@ verified_queries:
     WITH last_7 AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -7, CURRENT_DATE())
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') >= DATEADD('day', -7, CURRENT_DATE())
       GROUP BY "Client Name"
     ),
     prev_7 AS (
       SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-      WHERE TRY_TO_TIMESTAMP(PICKUPDATE) >= DATEADD('day', -14, CURRENT_DATE())
-        AND TRY_TO_TIMESTAMP(PICKUPDATE) < DATEADD('day', -7, CURRENT_DATE())
+      WHERE TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') >= DATEADD('day', -14, CURRENT_DATE())
+        AND TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY') < DATEADD('day', -7, CURRENT_DATE())
       GROUP BY "Client Name"
     )
     SELECT p."Client Name", COALESCE(l.revenue, 0) AS last_7d_revenue, p.revenue AS prev_7d_revenue,
@@ -1189,7 +1189,7 @@ verified_queries:
 - name: margin_trend_by_customer
   question: What is the margin trend for a customer by month?
   sql: |
-    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE)) AS month,
+    SELECT DATE_TRUNC('month', TRY_TO_TIMESTAMP(PICKUPDATE, 'MM/DD/YYYY')) AS month,
       SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
       SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin,
       SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct,
