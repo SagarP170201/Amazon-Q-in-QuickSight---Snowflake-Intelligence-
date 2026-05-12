@@ -327,6 +327,72 @@ ORDER BY ORDINAL_POSITION;
 
 ---
 
+## Trial → Production Migration (Git Integration)
+
+Use Snowflake's native Git Integration to sync this repo directly into your production account. This eliminates manual file uploads — any future YAML or script updates are available instantly via stage refresh.
+
+### One-Time Setup (5 min)
+
+**Step 1: Create API Integration (ACCOUNTADMIN)**
+```sql
+USE ROLE ACCOUNTADMIN;
+
+CREATE OR REPLACE API INTEGRATION git_api_integration
+  API_PROVIDER = git_https_api
+  API_ALLOWED_PREFIXES = ('https://github.com/SagarP170201')
+  ENABLED = TRUE;
+```
+
+**Step 2: Create Git Repository**
+```sql
+CREATE OR REPLACE GIT REPOSITORY XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO
+  API_INTEGRATION = git_api_integration
+  ORIGIN = 'https://github.com/SagarP170201/Amazon-Q-in-QuickSight---Snowflake-Intelligence-.git';
+```
+
+**Step 3: Fetch Latest**
+```sql
+ALTER GIT REPOSITORY XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO FETCH;
+```
+
+**Step 4: Verify Files**
+```sql
+SHOW GIT BRANCHES IN XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO;
+
+LS @XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO/branches/main/;
+```
+
+### Deploy from Git Repo
+
+**Run setup scripts directly from the repo stage:**
+```sql
+-- Run any script from the repo
+EXECUTE IMMEDIATE FROM @XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO/branches/main/scripts/01_setup_database.sql;
+EXECUTE IMMEDIATE FROM @XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO/branches/main/scripts/02_create_tables.sql;
+```
+
+**Deploy Semantic View from Git repo:**
+```sql
+CREATE OR REPLACE SEMANTIC VIEW XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XPRESSBEES_PROFITABILITY
+  FROM @XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO/branches/main/semantic_model/xpressbees_profitability_semantic_model.yaml;
+```
+
+### Ongoing Updates
+
+Whenever a fix is pushed to GitHub (e.g., date format fix, new VQRs):
+```sql
+-- Pull latest changes
+ALTER GIT REPOSITORY XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO FETCH;
+
+-- Re-deploy semantic view
+CREATE OR REPLACE SEMANTIC VIEW XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XPRESSBEES_PROFITABILITY
+  FROM @XPRESSBEES_PROFITABILITY.SEMANTIC_MODELS.XB_REPO/branches/main/semantic_model/xpressbees_profitability_semantic_model.yaml;
+```
+
+> **Note**: Data (CSVs) still needs to be loaded separately via `DATA_STAGE` — Git Integration handles scripts and YAML only, not data files.
+
+---
+
 ## Key Technical Learnings
 
 | Issue | Fix |
