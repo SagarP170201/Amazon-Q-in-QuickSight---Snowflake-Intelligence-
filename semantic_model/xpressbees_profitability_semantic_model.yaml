@@ -1,604 +1,1416 @@
-name: xpressbees_profitability
+name: XPRESSBEES_PROFITABILITY
 description: XpressBees B2B logistics profitability analysis covering revenue, cost, margin, yield, CPK, and volume metrics.
 tables:
-- name: b2b_revenue
-  description: Primary fact table with AWB-level revenue, cost breakdowns, margin, weights, and geography.
-  base_table:
-    database: XPRESSBEES_PROFITABILITY
-    schema: RAW
-    table: B2B_REVENUE
-  dimensions:
-  - name: awb_no
-    expr: '"AWB No"'
-    description: Air Waybill number - unique shipment identifier
-    synonyms:
-    - awb
-    - shipment number
-    data_type: TEXT
-  - name: client_name
-    expr: '"Client Name"'
-    description: Name of the client or customer
-    synonyms:
-    - customer name
-    - customer
-    - client
-    data_type: TEXT
-  - name: client_group
-    expr: '"Client Group"'
-    description: Client group or parent company
-    synonyms:
-    - customer group
-    data_type: TEXT
-  - name: client_id
-    expr: '"Client ID"'
-    description: Unique client identifier
-    synonyms:
-    - customer id
-    data_type: TEXT
-  - name: route
-    expr: '"Route"'
-    description: Shipment route classification
-    synonyms:
-    - route type
-    - national regional
-    sample_values:
-    - National
-    - Regional
-    data_type: TEXT
-  - name: origin_city
-    expr: '"Origin_City"'
-    description: City of shipment origin
-    synonyms:
-    - origin
-    - source city
-    - from city
-    data_type: TEXT
-  - name: dest_city
-    expr: '"Dest_City"'
-    description: City of shipment destination
-    synonyms:
-    - destination
-    - destination city
-    - to city
-    data_type: TEXT
-  - name: territory
-    expr: '"Territory"'
-    description: Primary territory assignment
-    synonyms:
-    - terr
-    data_type: TEXT
-  - name: zone
-    expr: '"Zone"'
-    description: Zone assignment
-    synonyms:
-    - region
-    data_type: TEXT
-  - name: tsm_name
-    expr: '"TSM.Name"'
-    description: Territory Sales Manager name
-    synonyms:
-    - tsm
-    data_type: TEXT
-  - name: zsm_name
-    expr: '"ZSM.Name"'
-    description: Zonal Sales Manager name
-    synonyms:
-    - zsm
-    data_type: TEXT
-  - name: origin_territory
-    expr: '"Origin_Terr"'
-    description: Territory of origin city
-    data_type: TEXT
-  - name: dest_territory
-    expr: '"Dest_Terr"'
-    description: Territory of destination city
-    data_type: TEXT
-  - name: revenue_type
-    expr: '"Revenue Type"'
-    description: Billing classification
-    data_type: TEXT
-  - name: density_bucket
-    expr: '"Density Bucket"'
-    description: Shipment density bucket
-    data_type: TEXT
-  - name: origin_hub_name
-    expr: '"Origin HubName"'
-    description: Origin hub name
-    data_type: TEXT
-  - name: destination_hub_name
-    expr: '"Destination HubName"'
-    description: Destination hub name
-    data_type: TEXT
-  - name: national_regional
-    expr: CASE WHEN "Origin_Terr" != "Dest_Terr" THEN 'National' ELSE 'Regional' END
-    description: National (cross-territory) vs Regional (same territory) classification
-    synonyms:
-    - national
-    - regional
-    - national vs regional
-    - route type
-    sample_values:
-    - National
-    - Regional
-    data_type: TEXT
-  time_dimensions:
-  - name: pickup_date
-    expr: TRY_TO_TIMESTAMP("PICKUPDATE")
-    description: Shipment pickup date
-    data_type: TIMESTAMP
-    synonyms:
-    - pickup date
-  - name: delivery_date
-    expr: TRY_TO_DATE("Del Date")
-    description: Delivery date
-    data_type: DATE
-    synonyms:
-    - del date
-  - name: inscan_date
-    expr: TRY_TO_TIMESTAMP("InScan Date")
-    description: InScan date
-    data_type: TIMESTAMP
-  facts:
-  - name: net_charges
-    expr: TRY_TO_NUMBER("Net Charges", 18, 2)
-    description: Total net revenue charges
-    synonyms:
-    - revenue
-    - net revenue
-    data_type: NUMBER
-  - name: total_cost
-    expr: TRY_TO_NUMBER("Total Cost", 18, 2)
-    description: Total cost of the shipment
-    synonyms:
-    - cost
-    data_type: NUMBER
-  - name: margin_value
-    expr: TRY_TO_NUMBER("Margin", 18, 2)
-    description: Pre-calculated margin (Net Charges - Total Cost)
-    synonyms:
-    - margin
-    - profit
-    data_type: NUMBER
-  - name: tot_chrgwt
-    expr: TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)
-    description: Total billed weight in kg
-    synonyms:
-    - billed weight
-    - volume
-    - weight
-    data_type: NUMBER
-  - name: tot_phywt
-    expr: TRY_TO_NUMBER("TOT_PHYWT", 18, 4)
-    description: Total physical weight in kg
-    data_type: NUMBER
-  - name: tot_volwt
-    expr: TRY_TO_NUMBER("TOT_VOLWT", 18, 4)
-    description: Total volumetric weight
-    data_type: NUMBER
-  - name: pickup_cost
-    expr: TRY_TO_NUMBER("Pickup Cost", 18, 2)
-    description: Total pickup cost
-    data_type: NUMBER
-  - name: delivery_cost
-    expr: TRY_TO_NUMBER("Delivery Cost", 18, 2)
-    description: Total delivery cost
-    data_type: NUMBER
-  - name: linehaul_cost
-    expr: TRY_TO_NUMBER("Linehaul Cost", 18, 2)
-    description: Linehaul transportation cost
-    synonyms:
-    - lh cost
-    data_type: NUMBER
-  - name: midmile_cost
-    expr: TRY_TO_NUMBER("Midmile Cost", 18, 2)
-    description: Mid-mile transportation cost
-    synonyms:
-    - mm cost
-    data_type: NUMBER
-  - name: handling_cost
-    expr: TRY_TO_NUMBER("Handling Cost", 18, 2)
-    description: Total handling cost
-    data_type: NUMBER
-  - name: common_costs
-    expr: TRY_TO_NUMBER("Common Costs", 18, 2)
-    description: Common overhead costs
-    data_type: NUMBER
-  - name: other_costs
-    expr: TRY_TO_NUMBER("Other Costs", 18, 2)
-    description: Other miscellaneous costs
-    data_type: NUMBER
-  - name: credit_notes
-    expr: TRY_TO_NUMBER("Credit Notes", 18, 2)
-    description: Credit note value
-    data_type: NUMBER
-  - name: freight
-    expr: TRY_TO_NUMBER("Freight", 18, 2)
-    description: Base freight charges
-    data_type: NUMBER
-  - name: fm_handling
-    expr: TRY_TO_NUMBER("FM handling", 18, 2)
-    description: First mile handling cost
-    data_type: NUMBER
-  - name: lm_handling
-    expr: TRY_TO_NUMBER("LM Handling", 18, 2)
-    description: Last mile handling cost
-    data_type: NUMBER
-  - name: mm_handling
-    expr: TRY_TO_NUMBER("MM Handling", 18, 2)
-    description: Mid mile handling cost
-    data_type: NUMBER
-  - name: milkrun_cost
-    expr: TRY_TO_NUMBER("Milkrun Cost", 18, 2)
-    description: Milkrun delivery cost
-    data_type: NUMBER
-  - name: feeder_cost
-    expr: TRY_TO_NUMBER("Feeder Cost - From Pickup branch / Hub till LH Hub", 18, 2)
-    description: Feeder cost to linehaul hub
-    data_type: NUMBER
-  - name: demurrage_charges
-    expr: TRY_TO_NUMBER("Demurrage Charges", 18, 2)
-    description: Demurrage penalty charges
-    data_type: NUMBER
-  - name: density
-    expr: TRY_TO_NUMBER("Density", 18, 4)
-    description: Shipment density
-    data_type: NUMBER
-  metrics:
-  - name: total_revenue
-    expr: SUM(TRY_TO_NUMBER("Net Charges", 18, 2))
-    description: Total revenue across all AWBs
-    synonyms:
-    - revenue
-  - name: total_cost_metric
-    expr: SUM(TRY_TO_NUMBER("Total Cost", 18, 2))
-    description: Total cost across all AWBs
-  - name: total_margin
-    expr: SUM(TRY_TO_NUMBER("Margin", 18, 2))
-    description: Total margin
-    synonyms:
-    - margin
-    - profit
-  - name: margin_percentage
-    expr: SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100
-    description: Margin as percentage of revenue
-    synonyms:
-    - margin pct
-    - margin %
-  - name: cpk
-    expr: SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0)
-    description: Cost Per Kg
-    synonyms:
-    - cost per kg
-  - name: yield_rpk
-    expr: SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0)
-    description: Yield or Revenue Per Kg
-    synonyms:
-    - yield
-    - rpk
-    - revenue per kg
-  - name: total_volume
-    expr: SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4))
-    description: Total billed weight volume in kg
-    synonyms:
-    - volume
-    - total weight
-  - name: shipment_count
-    expr: COUNT("AWB No")
-    description: Number of shipments
-    synonyms:
-    - awb count
-    - shipments
-  - name: unique_customers
-    expr: COUNT(DISTINCT "Client Name")
-    description: Number of unique customers
-  - name: total_pickup_cost
-    expr: SUM(TRY_TO_NUMBER("Pickup Cost", 18, 2))
-    description: Total pickup cost
-  - name: total_delivery_cost
-    expr: SUM(TRY_TO_NUMBER("Delivery Cost", 18, 2))
-    description: Total delivery cost
-  - name: total_linehaul_cost
-    expr: SUM(TRY_TO_NUMBER("Linehaul Cost", 18, 2))
-    description: Total linehaul cost
-  - name: total_midmile_cost
-    expr: SUM(TRY_TO_NUMBER("Midmile Cost", 18, 2))
-    description: Total midmile cost
-  - name: total_handling_cost
-    expr: SUM(TRY_TO_NUMBER("Handling Cost", 18, 2))
-    description: Total handling cost
-  primary_key:
-    columns:
-    - awb_no
-- name: awb_file
+- name: AWB_FILE
   description: AWB to Promised Delivery Date mapping.
   base_table:
     database: XPRESSBEES_PROFITABILITY
     schema: RAW
     table: AWB_FILE
+  primary_key:
+    columns:
+    - PARENTAWBNO
   dimensions:
-  - name: parentawbno
-    expr: '"parentawbno"'
+  - name: PARENTAWBNO
     description: Parent AWB number
-    data_type: TEXT
+    expr: |-
+      "parentawbno"
+    data_type: VARCHAR(16777216)
   time_dimensions:
-  - name: pdd
-    expr: TRY_TO_TIMESTAMP("pdd")
+  - name: PDD
     description: Promised delivery date
-    data_type: TIMESTAMP
-  primary_key:
-    columns:
-    - parentawbno
-- name: fm_journey
-  description: First mile journey details.
+    expr: |-
+      "pdd"
+    data_type: TIMESTAMP_NTZ(9)
+- name: B2B_REVENUE
+  description: Primary fact table with AWB-level revenue, cost breakdowns, margin, weights, and geography.
   base_table:
     database: XPRESSBEES_PROFITABILITY
     schema: RAW
-    table: FM_JOURNEY
-  dimensions:
-  - name: awb
-    expr: TRIM("AWB")
-    description: AWB number
-    data_type: TEXT
-  - name: fm_tripid
-    expr: '"FM_TRIPID"'
-    description: First mile trip ID
-    data_type: TEXT
-  - name: originhub
-    expr: '"ORIGINHUB"'
-    description: Origin hub
-    data_type: TEXT
-  - name: pickuppincode
-    expr: '"PICKUPPINCODE"'
-    description: Pickup pincode
-    data_type: TEXT
-  - name: oda_normal
-    expr: '"ODA/NORMAL"'
-    description: ODA or Normal classification
-    data_type: TEXT
-  time_dimensions:
-  - name: pickupdate
-    expr: TRY_TO_TIMESTAMP("PICKUPDATE")
-    description: Pickup date
-    data_type: TIMESTAMP
+    table: B2B_REVENUE
   primary_key:
     columns:
+    - AWB_NO
+  dimensions:
+  - name: AWB_NO
+    synonyms:
     - awb
-- name: lm_journey
-  description: Last mile journey details.
-  base_table:
-    database: XPRESSBEES_PROFITABILITY
-    schema: RAW
-    table: LM_JOURNEY
-  dimensions:
-  - name: awb
-    expr: TRIM("AWB")
-    description: AWB number
-    data_type: TEXT
-  - name: lm_tripid
-    expr: '"LM_TRIPID"'
-    description: Last mile trip ID
-    data_type: TEXT
-  - name: desthub
-    expr: '"DESTHUB"'
-    description: Destination hub
-    data_type: TEXT
-  - name: deliverypincode
-    expr: '"DELIVERYPINCODE"'
-    description: Delivery pincode
-    data_type: TEXT
-  - name: oda_normal_lm
-    expr: '"ODA/NORMAL"'
-    description: ODA or Normal
-    data_type: TEXT
-  - name: appt_normal
-    expr: '"APPT/NORMAL"'
-    description: Appointment or Normal
-    data_type: TEXT
-  time_dimensions:
-  - name: deliverydatetime
-    expr: TRY_TO_TIMESTAMP("DELIVERYDATETIME")
-    description: Delivery date and time
-    data_type: TIMESTAMP
+    - shipment number
+    - waybill
+    - waybill number
+    - docket
+    description: Air Waybill number - unique shipment identifier
+    expr: |-
+      "AWB No"
+    data_type: VARCHAR(16777216)
+  - name: CLIENT_GROUP
+    synonyms:
+    - customer group
+    description: Client group or parent company
+    expr: |-
+      "Client Group"
+    data_type: VARCHAR(16777216)
+  - name: CLIENT_ID
+    synonyms:
+    - customer id
+    description: Unique client identifier
+    expr: |-
+      "Client ID"
+    data_type: FLOAT
+  - name: CLIENT_NAME
+    synonyms:
+    - customer name
+    - customer
+    - client
+    description: Name of the client or customer
+    expr: |-
+      "Client Name"
+    data_type: VARCHAR(16777216)
+  - name: DENSITY_BUCKET
+    description: Shipment density bucket
+    expr: |-
+      "Density Bucket"
+    data_type: VARCHAR(16777216)
+  - name: DESTINATION_HUB_NAME
+    description: Destination hub name
+    expr: |-
+      "Destination HubName"
+    data_type: VARCHAR(16777216)
+  - name: DEST_CITY
+    synonyms:
+    - destination
+    - destination city
+    - to city
+    description: City of shipment destination
+    expr: |-
+      "Dest_City"
+    data_type: VARCHAR(16777216)
+  - name: DEST_TERRITORY
+    description: Territory of destination city
+    expr: |-
+      "Dest_Terr"
+    data_type: VARCHAR(16777216)
+  - name: NATIONAL_REGIONAL
+    synonyms:
+    - national
+    - regional
+    - national vs regional
+    - route type
+    description: National (cross-territory) vs Regional (same territory) classification
+    expr: |-
+      CASE WHEN "Origin_Terr" != "Dest_Terr" THEN 'National' ELSE 'Regional' END
+    data_type: VARCHAR(8)
+    sample_values:
+    - National
+    - Regional
+  - name: ORIGIN_CITY
+    synonyms:
+    - origin
+    - source city
+    - from city
+    description: City of shipment origin
+    expr: |-
+      "Origin_City"
+    data_type: VARCHAR(16777216)
+  - name: ORIGIN_HUB_NAME
+    description: Origin hub name
+    expr: |-
+      "Origin HubName"
+    data_type: VARCHAR(16777216)
+  - name: ORIGIN_TERRITORY
+    description: Territory of origin city
+    expr: |-
+      "Origin_Terr"
+    data_type: VARCHAR(16777216)
+  - name: REVENUE_TYPE
+    description: Billing classification
+    expr: |-
+      "Revenue Type"
+    data_type: VARIANT
+  - name: ROUTE
+    synonyms:
+    - route type
+    - national regional
+    description: Shipment route classification
+    expr: |-
+      "Route"
+    data_type: VARCHAR(16777216)
+    sample_values:
+    - National
+    - Regional
+  - name: TERRITORY
+    synonyms:
+    - terr
+    description: Primary territory assignment
+    expr: |-
+      "Territory"
+    data_type: VARCHAR(16777216)
+  - name: TSM_NAME
+    synonyms:
+    - tsm
+    description: Territory Sales Manager name
+    expr: |-
+      "TSM.Name"
+    data_type: VARCHAR(16777216)
+  - name: ZONE
+    synonyms:
+    - region
+    description: Zone assignment
+    expr: |-
+      "Zone"
+    data_type: VARCHAR(16777216)
+  - name: ZSM_NAME
+    synonyms:
+    - zsm
+    description: Zonal Sales Manager name
+    expr: |-
+      "ZSM.Name"
+    data_type: VARCHAR(16777216)
   facts:
-  - name: totalattemptcount
-    expr: TRY_TO_NUMBER("TOTALATTEMPTCOUNT")
-    description: Total delivery attempts
-    data_type: NUMBER
+  - name: COMMON_COSTS
+    description: Common overhead costs
+    expr: |-
+      "Common Costs"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: CREDIT_NOTES
+    description: Credit note value
+    expr: |-
+      "Credit Notes"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: DELIVERY_COST
+    description: Total delivery cost
+    expr: |-
+      "Delivery Cost"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: DEMURRAGE_CHARGES
+    description: Demurrage penalty charges
+    expr: |-
+      "Demurrage Charges"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: DENSITY
+    description: Shipment density
+    expr: |-
+      "Density"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: FEEDER_COST
+    description: Feeder cost to linehaul hub
+    expr: |-
+      "Feeder Cost - From Pickup branch / Hub till LH Hub"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: FM_HANDLING
+    description: First mile handling cost
+    expr: |-
+      "FM handling"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: FREIGHT
+    description: Base freight charges
+    expr: CAST(NULL AS NUMBER(18,2))
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  - name: HANDLING_COST
+    description: Total handling cost
+    expr: |-
+      "Handling Cost"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: LINEHAUL_COST
+    synonyms:
+    - lh cost
+    description: Linehaul transportation cost
+    expr: |-
+      "Linehaul Cost"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: LM_HANDLING
+    description: Last mile handling cost
+    expr: |-
+      "LM Handling"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: MARGIN_VALUE
+    synonyms:
+    - margin
+    - profit
+    description: Pre-calculated margin (Net Charges - Total Cost)
+    expr: |-
+      "Margin"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: MIDMILE_COST
+    synonyms:
+    - mm cost
+    description: Mid-mile transportation cost
+    expr: |-
+      "Midmile Cost"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: MILKRUN_COST
+    description: Milkrun delivery cost
+    expr: |-
+      "Milkrun Cost"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: MM_HANDLING
+    description: Mid mile handling cost
+    expr: |-
+      "MM Handling"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: NET_CHARGES
+    synonyms:
+    - revenue
+    - net revenue
+    description: Total net revenue charges
+    expr: |-
+      "Net Charges"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: OTHER_COSTS
+    description: Other miscellaneous costs
+    expr: |-
+      "Other Costs"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: PICKUP_COST
+    description: Total pickup cost
+    expr: |-
+      "Pickup Cost"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: TOTAL_COST
+    synonyms:
+    - cost
+    description: Total cost of the shipment
+    expr: |-
+      "Total Cost"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: TOT_CHRGWT
+    synonyms:
+    - billed weight
+    - volume
+    - weight
+    description: Total billed weight in kg
+    expr: |-
+      "TOT_CHRGWT"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: TOT_PHYWT
+    description: Total physical weight in kg
+    expr: |-
+      "TOT_PHYWT"
+    data_type: FLOAT
+    access_modifier: public_access
+  - name: TOT_VOLWT
+    description: Total volumetric weight
+    expr: |-
+      "TOT_VOLWT"
+    data_type: FLOAT
+    access_modifier: public_access
+  metrics:
+  - name: CPK
+    synonyms:
+    - cost per kg
+    description: Cost Per Kg
+    expr: |-
+      SUM("Total Cost") / NULLIF(SUM("TOT_CHRGWT"), 0)
+    access_modifier: public_access
+  - name: MARGIN_PERCENTAGE
+    synonyms:
+    - margin pct
+    - margin %
+    description: Margin as percentage of revenue
+    expr: |-
+      SUM("Margin") / NULLIF(SUM("Net Charges"), 0) * 100
+    access_modifier: public_access
+  - name: SHIPMENT_COUNT
+    synonyms:
+    - awb count
+    - shipments
+    description: Number of shipments
+    expr: |-
+      COUNT("AWB No")
+    access_modifier: public_access
+  - name: TOTAL_COST_METRIC
+    description: Total cost across all AWBs
+    expr: |-
+      SUM("Total Cost")
+    access_modifier: public_access
+  - name: TOTAL_DELIVERY_COST
+    description: Total delivery cost
+    expr: |-
+      SUM("Delivery Cost")
+    access_modifier: public_access
+  - name: TOTAL_HANDLING_COST
+    description: Total handling cost
+    expr: |-
+      SUM("Handling Cost")
+    access_modifier: public_access
+  - name: TOTAL_LINEHAUL_COST
+    description: Total linehaul cost
+    expr: |-
+      SUM("Linehaul Cost")
+    access_modifier: public_access
+  - name: TOTAL_MARGIN
+    synonyms:
+    - margin
+    - profit
+    description: Total margin
+    expr: |-
+      SUM("Margin")
+    access_modifier: public_access
+  - name: TOTAL_MIDMILE_COST
+    description: Total midmile cost
+    expr: |-
+      SUM("Midmile Cost")
+    access_modifier: public_access
+  - name: TOTAL_PICKUP_COST
+    description: Total pickup cost
+    expr: |-
+      SUM("Pickup Cost")
+    access_modifier: public_access
+  - name: TOTAL_REVENUE
+    synonyms:
+    - revenue
+    description: Total revenue across all AWBs
+    expr: |-
+      SUM("Net Charges")
+    access_modifier: public_access
+  - name: TOTAL_VOLUME
+    synonyms:
+    - volume
+    - total weight
+    description: Total billed weight volume in kg
+    expr: |-
+      SUM("TOT_CHRGWT")
+    access_modifier: public_access
+  - name: UNIQUE_CUSTOMERS
+    description: Number of unique customers
+    expr: |-
+      COUNT(DISTINCT "Client Name")
+    access_modifier: public_access
+  - name: YIELD_RPK
+    synonyms:
+    - yield
+    - rpk
+    - revenue per kg
+    description: Yield or Revenue Per Kg
+    expr: |-
+      SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0)
+    access_modifier: public_access
+  time_dimensions:
+  - name: DELIVERY_DATE
+    synonyms:
+    - del date
+    description: Delivery date
+    expr: |-
+      "Del Date2"
+    data_type: TIMESTAMP_NTZ(9)
+  - name: INSCAN_DATE
+    description: InScan date
+    expr: |-
+      "InScan Date"
+    data_type: TIMESTAMP_NTZ(9)
+  - name: PICKUP_DATE
+    synonyms:
+    - pickup date
+    description: Shipment pickup date
+    expr: |-
+      "PICKUPDATE"
+    data_type: TIMESTAMP_NTZ(9)
+- name: DAILY_LOAD
+  description: Trip-level linehaul load details per AWB — loading/unloading cities, connection names, LH cost per shipment.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: DAILY_LOAD
   primary_key:
     columns:
-    - awb
-- name: dim_hub_city
+    - DL_AWB
+  dimensions:
+  - name: DL_ARRIVAL_LOCATION
+    description: Arrival hub (unloading)
+    expr: |-
+      "ARRIVAL_LOCATION (UnLoading)"
+    data_type: VARCHAR(16777216)
+  - name: DL_AWB
+    description: AWB number
+    expr: AWB
+    data_type: VARCHAR(16777216)
+  - name: DL_CLIENTNAME
+    description: Client name
+    expr: CLIENTNAME
+    data_type: VARCHAR(16777216)
+  - name: DL_CONNECTIONID
+    description: Connection ID
+    expr: |-
+      "connectionid"
+    data_type: VARCHAR(16777216)
+  - name: DL_CONNECTION_NAME
+    synonyms:
+    - route name
+    - connection
+    description: Connection/route name
+    expr: |-
+      "final_connection_name"
+    data_type: VARCHAR(16777216)
+  - name: DL_DEPART_LOCATION
+    description: Departure hub (loading)
+    expr: |-
+      "DEPART_LOCATION (Loading)"
+    data_type: VARCHAR(16777216)
+  - name: DL_DESTHUB
+    description: Destination hub
+    expr: DESTHUB
+    data_type: VARCHAR(16777216)
+  - name: DL_LOADING_CITY
+    synonyms:
+    - from city
+    - origin city
+    description: Loading city
+    expr: |-
+      "Loading_city"
+    data_type: VARCHAR(16777216)
+  - name: DL_MM_TRIPID
+    description: Mid-mile trip ID
+    expr: MM_TRIPID
+    data_type: VARCHAR(16777216)
+  - name: DL_ORIGINHUB
+    description: Origin hub
+    expr: ORIGINHUB
+    data_type: VARCHAR(16777216)
+  - name: DL_STOPPOINTHUBNAME
+    description: Stop point hub name
+    expr: STOPPOINTHUBNAME
+    data_type: VARCHAR(16777216)
+  - name: DL_UNLOADING_CITY
+    synonyms:
+    - to city
+    - destination city
+    description: Unloading city
+    expr: |-
+      "Unloading_city"
+    data_type: VARCHAR(16777216)
+  facts:
+  - name: DL_LH_COST
+    synonyms:
+    - linehaul cost per awb
+    description: Linehaul cost allocated to this AWB
+    expr: |-
+      "LH Cost"
+    data_type: NUMBER(18,4)
+    access_modifier: public_access
+  - name: DL_STOPPOINTORDER
+    description: Stop point order in trip
+    expr: |-
+      "stoppointorder"
+    data_type: NUMBER(10,0)
+    access_modifier: public_access
+  - name: DL_TOT_CHRGWT
+    synonyms:
+    - load weight
+    - trip weight
+    description: Billed weight per AWB on this trip
+    expr: TOT_CHRGWT
+    data_type: NUMBER(18,4)
+    access_modifier: public_access
+  - name: DL_TOT_PHYWT
+    description: Physical weight per AWB
+    expr: TOT_PHYWT
+    data_type: NUMBER(18,4)
+    access_modifier: public_access
+  - name: DL_TOT_VOLWT
+    description: Volumetric weight per AWB
+    expr: TOT_VOLWT
+    data_type: NUMBER(18,4)
+    access_modifier: public_access
+  metrics:
+  - name: DL_AWB_COUNT
+    description: Unique AWBs on trips
+    expr: COUNT(DISTINCT AWB)
+    access_modifier: public_access
+  - name: DL_LH_CPK
+    description: Linehaul cost per kg
+    expr: |-
+      SUM("LH Cost") / NULLIF(SUM(TOT_CHRGWT), 0)
+    access_modifier: public_access
+  - name: DL_TOTAL_LH_COST
+    description: Total linehaul cost across trips
+    expr: |-
+      SUM("LH Cost")
+    access_modifier: public_access
+  - name: DL_TOTAL_LOAD
+    description: Total load (billed weight) on trips
+    expr: SUM(TOT_CHRGWT)
+    access_modifier: public_access
+  time_dimensions:
+  - name: DL_TRIP_CLOSE_DATE
+    description: Trip close date
+    expr: |-
+      "Trip_close_date"
+    data_type: TIMESTAMP_NTZ(9)
+  - name: DL_TRIP_START_DATE
+    description: Trip start date
+    expr: |-
+      "Trip_start_date"
+    data_type: TIMESTAMP_NTZ(9)
+- name: DIM_HUB_CITY
   description: Hub to city and territory mapping.
   base_table:
     database: XPRESSBEES_PROFITABILITY
     schema: RAW
     table: DIM_HUB_CITY
-  dimensions:
-  - name: hub_name
-    expr: '"HubName"'
-    description: Hub name code
-    data_type: TEXT
-  - name: hub_state
-    expr: '"HubState"'
-    description: Hub state
-    data_type: TEXT
-  - name: hub_city
-    expr: '"HubCity"'
-    description: Hub city
-    data_type: TEXT
-  - name: hub_territory
-    expr: '"Territory"'
-    description: Hub territory
-    data_type: TEXT
   primary_key:
     columns:
-    - hub_name
-- name: dim_hub_to_zone
+    - HUB_NAME
+  dimensions:
+  - name: HUB_CITY
+    description: Hub city
+    expr: |-
+      "HubCity"
+    data_type: VARCHAR(16777216)
+  - name: HUB_NAME
+    description: Hub name code
+    expr: |-
+      "HubName"
+    data_type: VARCHAR(16777216)
+  - name: HUB_STATE
+    description: Hub state
+    expr: |-
+      "HubState"
+    data_type: VARCHAR(16777216)
+  - name: HUB_TERRITORY
+    description: Hub territory
+    expr: |-
+      "Territory"
+    data_type: VARCHAR(16777216)
+- name: DIM_HUB_TO_ZONE
   description: Hub to zone mapping.
   base_table:
     database: XPRESSBEES_PROFITABILITY
     schema: RAW
     table: DIM_HUB_TO_ZONE
-  dimensions:
-  - name: hub_name_zone
-    expr: '"hubname"'
-    description: Hub name
-    data_type: TEXT
-  - name: hub_zone_name
-    expr: '"hubzonename"'
-    description: Zone name
-    synonyms:
-    - zone
-    data_type: TEXT
-  - name: center_type
-    expr: '"centertype"'
-    description: Center type (Hub/SVC)
-    data_type: TEXT
   primary_key:
     columns:
-    - hub_name_zone
+    - HUB_NAME_ZONE
+  dimensions:
+  - name: CENTER_TYPE
+    description: Center type (Hub/SVC)
+    expr: |-
+      "centertype"
+    data_type: VARCHAR(16777216)
+  - name: HUB_NAME_ZONE
+    description: Hub name
+    expr: |-
+      "hubname"
+    data_type: VARCHAR(16777216)
+  - name: HUB_ZONE_NAME
+    synonyms:
+    - zone
+    description: Zone name
+    expr: |-
+      "hubzonename"
+    data_type: VARCHAR(16777216)
+- name: FM_JOURNEY
+  description: First mile journey details.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: FM_JOURNEY
+  primary_key:
+    columns:
+    - AWB
+  dimensions:
+  - name: AWB
+    description: AWB number
+    expr: |-
+      TRIM("AWB")
+    data_type: VARCHAR(16777216)
+  - name: FM_TRIPID
+    description: First mile trip ID
+    expr: |-
+      "FM_TRIPID"
+    data_type: VARIANT
+  - name: ODA_NORMAL
+    description: ODA or Normal classification
+    expr: |-
+      "ODA/NORMAL"
+    data_type: VARCHAR(16777216)
+  - name: ORIGINHUB
+    description: Origin hub
+    expr: |-
+      "ORIGINHUB"
+    data_type: VARCHAR(16777216)
+  - name: PICKUPPINCODE
+    description: Pickup pincode
+    expr: |-
+      "PICKUPPINCODE"
+    data_type: FLOAT
+  time_dimensions:
+  - name: PICKUPDATE
+    description: Pickup date
+    expr: |-
+      "PICKUPDATE"
+    data_type: TIMESTAMP_NTZ(9)
+- name: LM_JOURNEY
+  description: Last mile journey details.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: LM_JOURNEY
+  primary_key:
+    columns:
+    - AWB
+  dimensions:
+  - name: APPT_NORMAL
+    description: Appointment or Normal
+    expr: |-
+      "APPT/NORMAL"
+    data_type: VARCHAR(16777216)
+  - name: AWB
+    description: AWB number
+    expr: |-
+      TRIM("AWB")
+    data_type: VARCHAR(16777216)
+  - name: DELIVERYPINCODE
+    description: Delivery pincode
+    expr: |-
+      "DELIVERYPINCODE"
+    data_type: FLOAT
+  - name: DESTHUB
+    description: Destination hub
+    expr: |-
+      "DESTHUB"
+    data_type: VARCHAR(16777216)
+  - name: LM_TRIPID
+    description: Last mile trip ID
+    expr: |-
+      "LM_TRIPID"
+    data_type: VARIANT
+  - name: ODA_NORMAL_LM
+    description: ODA or Normal
+    expr: |-
+      "ODA/NORMAL"
+    data_type: VARCHAR(16777216)
+  facts:
+  - name: TOTALATTEMPTCOUNT
+    description: Total delivery attempts
+    expr: |-
+      "TOTALATTEMPTCOUNT"
+    data_type: FLOAT
+    access_modifier: public_access
+  time_dimensions:
+  - name: DELIVERYDATETIME
+    description: Delivery date and time
+    expr: |-
+      TRY_TO_TIMESTAMP("DELIVERYDATETIME"::VARCHAR)
+    data_type: TIMESTAMP_NTZ(9)
+- name: MM_JOURNEY
+  description: Mid-mile journey details — trip connections, loading/unloading hubs, connection types.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: MM_JOURNEY
+  primary_key:
+    columns:
+    - MM_AWB
+  dimensions:
+  - name: MM_ARRIVAL_LOCATION
+    description: Arrival/unloading hub
+    expr: |-
+      "ARRIVAL_LOCATION (UnLoading)"
+    data_type: VARCHAR(16777216)
+  - name: MM_AWB
+    description: AWB number
+    expr: TRIM(AWB)
+    data_type: VARCHAR(16777216)
+  - name: MM_CONNECTIONID
+    description: Connection ID
+    expr: CONNECTIONID
+    data_type: VARIANT
+  - name: MM_CONNECTIONTYPE
+    description: Connection type (Local/Network)
+    expr: CONNECTIONTYPE
+    data_type: VARCHAR(16777216)
+    sample_values:
+    - Local Connection
+    - Network Connection
+  - name: MM_DEPART_LOCATION
+    description: Departure/loading hub
+    expr: |-
+      "DEPART_LOCATION (Loading)"
+    data_type: VARCHAR(16777216)
+  - name: MM_TRIPID
+    description: Mid-mile trip ID
+    expr: MM_TRIPID
+    data_type: VARIANT
+  facts:
+  - name: MM_TRIP_ORDER
+    description: Trip leg order in the journey
+    expr: |-
+      "TRIP ORDER"
+    data_type: FLOAT
+    access_modifier: public_access
+- name: WEIGHTED_UTILIZATION
+  description: Vehicle/trip-level utilization metrics — capacity, actual load, utilization %, trip cost, cost per kg.
+  base_table:
+    database: XPRESSBEES_PROFITABILITY
+    schema: RAW
+    table: WEIGHTED_UTILIZATION
+  primary_key:
+    columns:
+    - WU_TRIPSHEETNO
+  dimensions:
+  - name: WU_CONNECTIONID
+    description: Connection ID
+    expr: |-
+      "connectionid"
+    data_type: VARCHAR(16777216)
+  - name: WU_CONNECTION_NAME
+    synonyms:
+    - route
+    - connection
+    description: Connection/route name
+    expr: |-
+      "Final connection name"
+    data_type: VARCHAR(16777216)
+  - name: WU_DEDICATED_ROUTE
+    description: Dedicated route mapping
+    expr: |-
+      "Dedicated Route as per Mapping"
+    data_type: VARCHAR(16777216)
+  - name: WU_LANE
+    synonyms:
+    - od pair
+    - route lane
+    description: Lane (origin-destination pair)
+    expr: |-
+      "Lane"
+    data_type: VARCHAR(16777216)
+  - name: WU_LOAD_UNLOAD_CITY
+    description: Loading/unloading city
+    expr: |-
+      "load_unloadcity"
+    data_type: VARCHAR(16777216)
+  - name: WU_ROUTE_TYPE
+    synonyms:
+    - national regional
+    description: Route type (National/Regional)
+    expr: |-
+      "Route type"
+    data_type: VARCHAR(16777216)
+    sample_values:
+    - National
+    - Regional
+  - name: WU_TRIPSHEETNO
+    description: Trip sheet number
+    expr: |-
+      "TripSheetNo"
+    data_type: VARCHAR(16777216)
+  - name: WU_VEHICLE_NAME
+    synonyms:
+    - vehicle
+    - truck type
+    description: Vehicle type/name
+    expr: |-
+      "vehiclename"
+    data_type: VARCHAR(16777216)
+  - name: WU_VENDOR_NAME
+    description: Vehicle vendor name
+    expr: |-
+      "Vendor_Name"
+    data_type: VARCHAR(16777216)
+  facts:
+  - name: WU_CHG_WT
+    description: Charged weight loaded
+    expr: |-
+      TRY_TO_NUMBER("Chg Wt", 18, 2)
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  - name: WU_DISTANCE
+    description: Trip distance
+    expr: |-
+      TRY_TO_NUMBER("Dist.", 18, 2)
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  - name: WU_PHY_CAP
+    description: Physical weight capacity
+    expr: |-
+      TRY_TO_NUMBER("Phy Cap", 18, 2)
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  - name: WU_PHY_WT
+    description: Physical weight loaded
+    expr: |-
+      TRY_TO_NUMBER("Phy Wt", 18, 2)
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  - name: WU_TRIP_COST
+    synonyms:
+    - vehicle cost
+    description: Total trip cost
+    expr: |-
+      TRY_TO_NUMBER("Trip Cost", 18, 2)
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  - name: WU_VOL_CAP
+    description: Volumetric weight capacity
+    expr: |-
+      TRY_TO_NUMBER("Vol Cap", 18, 2)
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  - name: WU_VOL_WT
+    description: Volumetric weight loaded
+    expr: |-
+      TRY_TO_NUMBER("Vol Wt", 18, 2)
+    data_type: NUMBER(18,2)
+    access_modifier: public_access
+  metrics:
+  - name: WU_AVG_PHY_UTILIZATION
+    description: Average physical weight utilization %
+    expr: |-
+      AVG(TRY_TO_NUMBER(REPLACE("WU_Phy", '%', ''), 18, 2))
+    access_modifier: public_access
+  - name: WU_AVG_VOL_UTILIZATION
+    description: Average volumetric utilization %
+    expr: |-
+      AVG(TRY_TO_NUMBER(REPLACE("WU_Vol", '%', ''), 18, 2))
+    access_modifier: public_access
+  - name: WU_COST_PER_KG
+    description: Trip cost per kg
+    expr: |-
+      SUM(TRY_TO_NUMBER("Trip Cost", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Chg Wt", 18, 2)), 0)
+    access_modifier: public_access
+  - name: WU_TOTAL_TRIP_COST
+    description: Total trip cost
+    expr: |-
+      SUM(TRY_TO_NUMBER("Trip Cost", 18, 2))
+    access_modifier: public_access
+  - name: WU_TRIP_COUNT
+    description: Number of unique trips
+    expr: |-
+      COUNT(DISTINCT "TripSheetNo")
+    access_modifier: public_access
+  time_dimensions:
+  - name: WU_CLOSE_DATE
+    description: Trip close date
+    expr: |-
+      TRY_TO_DATE("Close Date")
+    data_type: DATE
+  - name: WU_START_DATE
+    description: Trip start date
+    expr: |-
+      TRY_TO_DATE("Start Date")
+    data_type: DATE
 relationships:
-- name: b2b_to_awb
-  left_table: b2b_revenue
-  right_table: awb_file
+- name: B2B_TO_AWB
+  left_table: B2B_REVENUE
+  right_table: AWB_FILE
   relationship_columns:
-  - left_column: awb_no
-    right_column: parentawbno
-  join_type: left_outer
+  - left_column: AWB_NO
+    right_column: PARENTAWBNO
   relationship_type: many_to_one
-- name: b2b_to_fm
-  left_table: fm_journey
-  right_table: b2b_revenue
+  join_type: left_outer
+- name: B2B_TO_FM
+  left_table: FM_JOURNEY
+  right_table: B2B_REVENUE
   relationship_columns:
-  - left_column: awb
-    right_column: awb_no
-  join_type: left_outer
+  - left_column: AWB
+    right_column: AWB_NO
   relationship_type: many_to_one
-- name: b2b_to_lm
-  left_table: lm_journey
-  right_table: b2b_revenue
+  join_type: left_outer
+- name: B2B_TO_LM
+  left_table: LM_JOURNEY
+  right_table: B2B_REVENUE
   relationship_columns:
-  - left_column: awb
-    right_column: awb_no
-  join_type: left_outer
+  - left_column: AWB
+    right_column: AWB_NO
   relationship_type: many_to_one
+  join_type: left_outer
+- name: B2B_TO_MM
+  left_table: MM_JOURNEY
+  right_table: B2B_REVENUE
+  relationship_columns:
+  - left_column: MM_AWB
+    right_column: AWB_NO
+  relationship_type: many_to_one
+  join_type: left_outer
+module_custom_instructions:
+  sql_generation: |-
+    Revenue = Net Charges column. Margin = pre-calculated Margin column. Margin% = SUM(Margin)/NULLIF(SUM(Net Charges),0)*100. CPK = SUM(Total Cost)/NULLIF(SUM(TOT_CHRGWT),0). Yield/RPK = SUM(Net Charges)/NULLIF(SUM(TOT_CHRGWT),0). Volume = TOT_CHRGWT (billed weight kg). National vs Regional: National means Origin_Terr != Dest_Terr (cross-territory). Regional means Origin_Terr = Dest_Terr (same territory). Do NOT use Route column for national/regional — it only has Surface. Top N: include revenue, margin, volume. 10 lakhs = 1000000. Numeric columns (Net Charges, Total Cost, Margin, TOT_CHRGWT, and all cost columns) are native numeric types - use them directly in aggregations. Do NOT wrap them in TRY_TO_NUMBER(). Cost RCA: break Total Cost into Pickup, Delivery, Linehaul, Midmile, Handling, Common, Other costs. Time-based analysis (this month, last month, last N months, quarter, YTD, trends, MoM, YoY) MUST use the "InScan Date" column as the business/transaction date. Do NOT use PICKUPDATE for time filtering or grouping. Yield (RPK) is always revenue per unit volume = SUM(Net Charges)/NULLIF(SUM(TOT_CHRGWT),0); never express yield as a percentage of revenue.
 verified_queries:
-- name: overall_business_summary
+- name: OVERALL_BUSINESS_SUMMARY
+  sql: |
+    SELECT COUNT("AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers, SUM("Net Charges") AS total_revenue, SUM("Total Cost") AS total_cost, SUM("Margin") AS total_margin, SUM("Margin") / NULLIF(SUM("Net Charges"), 0) * 100 AS margin_pct, SUM("TOT_CHRGWT") AS total_volume_kg, SUM("Total Cost") / NULLIF(SUM("TOT_CHRGWT"), 0) AS cpk, SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield_rpk FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
   question: What is my overall business this month?
+  use_as_onboarding_question: false
+- name: TOP_5_CUSTOMERS
   sql: |
-    SELECT COUNT(DISTINCT "AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers, SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin, SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct, SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg, SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS cpk, SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield_rpk FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE WHERE DATE_TRUNC('MONTH', TRY_TO_TIMESTAMP("InScan Date")) = DATE_TRUNC('MONTH', CURRENT_DATE())
-- name: top_5_customers
+    SELECT "Client Name", SUM("Net Charges") AS total_revenue, SUM("Margin") AS total_margin, SUM("TOT_CHRGWT") AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 5
   question: Who are my top 5 customers?
+  use_as_onboarding_question: false
+- name: TOP_10_CUSTOMERS
   sql: |
-    SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin, SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 5
-- name: top_10_customers
+    SELECT "Client Name", SUM("Net Charges") AS total_revenue, SUM("Margin") AS total_margin, SUM("TOT_CHRGWT") AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 10
   question: Who are my top 10 customers?
+  use_as_onboarding_question: false
+- name: TOP_20_CUSTOMERS
   sql: |
-    SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin, SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 10
-- name: top_20_customers
+    SELECT "Client Name", SUM("Net Charges") AS total_revenue, SUM("Margin") AS total_margin, SUM("TOT_CHRGWT") AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 20
   question: Who are my top 20 customers?
+  use_as_onboarding_question: false
+- name: MAX_LOAD_ON_LANE
   sql: |
-    SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin, SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 20
-- name: max_load_on_lane
+    SELECT "Client Name", SUM("TOT_CHRGWT") AS total_volume_kg, SUM("Net Charges") AS total_revenue, SUM("Margin") AS total_margin FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE WHERE UPPER("Origin_City") LIKE '%DELHI%' AND UPPER("Dest_City") = 'BANGALORE' GROUP BY "Client Name" ORDER BY total_volume_kg DESC LIMIT 10
   question: Which customer gives me maximum load on DEL-BLR lane?
+  use_as_onboarding_question: false
+- name: OVERALL_YIELD
   sql: |
-    SELECT "Client Name", SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg, SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE WHERE "Origin_City" = 'DEL' AND "Dest_City" = 'BLR' GROUP BY "Client Name" ORDER BY total_volume_kg DESC LIMIT 10
-- name: overall_yield
+    SELECT SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS overall_yield_rpk, SUM("Net Charges") AS total_revenue, SUM("TOT_CHRGWT") AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
   question: What is my overall yield this month?
+  use_as_onboarding_question: false
+- name: YIELD_TOP_10
   sql: |
-    SELECT SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS overall_yield_rpk, SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE WHERE DATE_TRUNC('MONTH', TRY_TO_TIMESTAMP("InScan Date")) = DATE_TRUNC('MONTH', CURRENT_DATE())
-- name: yield_top_10
+    SELECT "Client Name", SUM("Net Charges") AS total_revenue, SUM("TOT_CHRGWT") AS total_volume_kg, SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield_rpk FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 10
   question: What is the yield of my top 10 customers?
+  use_as_onboarding_question: false
+- name: COST_DRIVING_LOSS_CLIENT
   sql: |
-    SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume_kg, SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)), 0) AS yield_rpk FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE WHERE DATE_TRUNC('MONTH', TRY_TO_TIMESTAMP("InScan Date")) = DATE_TRUNC('MONTH', CURRENT_DATE()) GROUP BY "Client Name" ORDER BY total_revenue DESC LIMIT 10
-- name: cost_driving_loss_client
+    SELECT "Client Name", SUM("Net Charges") AS revenue, SUM("Total Cost") AS total_cost, SUM("Margin") AS margin, SUM("Pickup Cost") AS pickup_cost, SUM("Delivery Cost") AS delivery_cost, SUM("Linehaul Cost") AS linehaul_cost, SUM("Midmile Cost") AS midmile_cost, SUM("Handling Cost") AS handling_cost, SUM("Common Costs") AS common_costs, SUM("Other Costs") AS other_costs FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" HAVING SUM("Margin") < 0 ORDER BY margin ASC LIMIT 10
   question: Which cost is driving the loss for the client?
+  use_as_onboarding_question: false
+- name: COST_DRIVING_LOSS_LANE
   sql: |
-    SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue, SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin, SUM(TRY_TO_NUMBER("Pickup Cost", 18, 2)) AS pickup_cost, SUM(TRY_TO_NUMBER("Delivery Cost", 18, 2)) AS delivery_cost, SUM(TRY_TO_NUMBER("Linehaul Cost", 18, 2)) AS linehaul_cost, SUM(TRY_TO_NUMBER("Midmile Cost", 18, 2)) AS midmile_cost, SUM(TRY_TO_NUMBER("Handling Cost", 18, 2)) AS handling_cost, SUM(TRY_TO_NUMBER("Common Costs", 18, 2)) AS common_costs, SUM(TRY_TO_NUMBER("Other Costs", 18, 2)) AS other_costs FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Margin", 18, 2)) < 0 ORDER BY margin ASC LIMIT 10
-- name: cost_driving_loss_lane
+    SELECT "Origin_City" || '-' || "Dest_City" AS od_pair, SUM("Net Charges") AS revenue, SUM("Total Cost") AS total_cost, SUM("Margin") AS margin, SUM("Pickup Cost") AS pickup_cost, SUM("Delivery Cost") AS delivery_cost, SUM("Linehaul Cost") AS linehaul_cost, SUM("Midmile Cost") AS midmile_cost, SUM("Handling Cost") AS handling_cost, SUM("Common Costs") AS common_costs FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Origin_City", "Dest_City" HAVING SUM("Margin") < 0 ORDER BY margin ASC LIMIT 10
   question: Which cost is driving the loss for the lane?
-  sql: |
-    SELECT "Origin_City" || '-' || "Dest_City" AS od_pair, SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue, SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin, SUM(TRY_TO_NUMBER("Pickup Cost", 18, 2)) AS pickup_cost, SUM(TRY_TO_NUMBER("Delivery Cost", 18, 2)) AS delivery_cost, SUM(TRY_TO_NUMBER("Linehaul Cost", 18, 2)) AS linehaul_cost, SUM(TRY_TO_NUMBER("Midmile Cost", 18, 2)) AS midmile_cost, SUM(TRY_TO_NUMBER("Handling Cost", 18, 2)) AS handling_cost, SUM(TRY_TO_NUMBER("Common Costs", 18, 2)) AS common_costs FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Origin_City", "Dest_City" HAVING SUM(TRY_TO_NUMBER("Margin", 18, 2)) < 0 ORDER BY margin ASC LIMIT 10
-- name: national_vs_regional
-  question: What is the national vs regional volume comparison?
+  use_as_onboarding_question: false
+- name: NATIONAL_VS_REGIONAL
   sql: |
     SELECT CASE WHEN "Origin_Terr" != "Dest_Terr" THEN 'National' ELSE 'Regional' END AS route_type,
-      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS total_volume,
-      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue,
-      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin,
+      SUM("TOT_CHRGWT") AS total_volume,
+      SUM("Net Charges") AS total_revenue,
+      SUM("Margin") AS total_margin,
       COUNT("AWB No") AS shipment_count
     FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
     GROUP BY route_type
     ORDER BY total_volume DESC
-- name: negative_margin_above_10l
+  question: What is the national vs regional volume comparison?
+  use_as_onboarding_question: false
+- name: NEGATIVE_MARGIN_ABOVE_10L
+  sql: |
+    SELECT "Client Name", SUM("Net Charges") AS total_revenue, SUM("Total Cost") AS total_cost, SUM("Margin") AS total_margin, SUM("Margin") / NULLIF(SUM("Net Charges"), 0) * 100 AS margin_pct FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" HAVING SUM("Net Charges") > 1000000 AND SUM("Margin") < 0 ORDER BY total_margin ASC LIMIT 10
   question: Top 10 negative margin customers with revenue more than 10 lacs?
+  use_as_onboarding_question: false
+- name: TOP_5_NEGATIVE_OD
   sql: |
-    SELECT "Client Name", SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin, SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Client Name" HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000 AND SUM(TRY_TO_NUMBER("Margin", 18, 2)) < 0 ORDER BY total_margin ASC LIMIT 10
-- name: top_5_negative_od
+    SELECT "Origin_City" || '-' || "Dest_City" AS od_pair, SUM("Net Charges") AS total_revenue, SUM("Total Cost") AS total_cost, SUM("Margin") AS total_margin FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Origin_City", "Dest_City" HAVING SUM("Margin") < 0 ORDER BY total_margin ASC LIMIT 5
   question: What are the top 5 OD pairs with the most negative margin?
+  use_as_onboarding_question: false
+- name: COST_BREAKDOWN
   sql: |
-    SELECT "Origin_City" || '-' || "Dest_City" AS od_pair, SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS total_revenue, SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost, SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS total_margin FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE GROUP BY "Origin_City", "Dest_City" HAVING SUM(TRY_TO_NUMBER("Margin", 18, 2)) < 0 ORDER BY total_margin ASC LIMIT 5
-- name: cost_breakdown
+    SELECT SUM("Pickup Cost") AS pickup_cost, SUM("Delivery Cost") AS delivery_cost, SUM("Linehaul Cost") AS linehaul_cost, SUM("Midmile Cost") AS midmile_cost, SUM("Handling Cost") AS handling_cost, SUM("Common Costs") AS common_costs, SUM("Other Costs") AS other_costs, SUM("Total Cost") AS total_cost FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
   question: What is the cost breakdown?
-  sql: |
-    SELECT SUM(TRY_TO_NUMBER("Pickup Cost", 18, 2)) AS pickup_cost, SUM(TRY_TO_NUMBER("Delivery Cost", 18, 2)) AS delivery_cost, SUM(TRY_TO_NUMBER("Linehaul Cost", 18, 2)) AS linehaul_cost, SUM(TRY_TO_NUMBER("Midmile Cost", 18, 2)) AS midmile_cost, SUM(TRY_TO_NUMBER("Handling Cost", 18, 2)) AS handling_cost, SUM(TRY_TO_NUMBER("Common Costs", 18, 2)) AS common_costs, SUM(TRY_TO_NUMBER("Other Costs", 18, 2)) AS other_costs, SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
-- name: top5_od_negative_margin_per_customer
-  question: Top 5 OD pair wise lanes contributing to negative margin in top 10 negative margin customers
+  use_as_onboarding_question: false
+- name: TOP5_OD_NEGATIVE_MARGIN_PER_CUSTOMER
   sql: |
     WITH neg_customers AS (
       SELECT "Client Name"
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
       GROUP BY "Client Name"
-      HAVING SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) > 1000000
-        AND SUM(TRY_TO_NUMBER("Margin", 18, 2)) < 0
-      ORDER BY SUM(TRY_TO_NUMBER("Margin", 18, 2)) ASC
+      HAVING SUM("Net Charges") > 1000000
+        AND SUM("Margin") < 0
+      ORDER BY SUM("Margin") ASC
       LIMIT 10
     ),
     ranked AS (
       SELECT b."Client Name",
         b."Origin_City" || '-' || b."Dest_City" AS od_pair,
-        SUM(TRY_TO_NUMBER(b."Net Charges", 18, 2)) AS revenue,
-        SUM(TRY_TO_NUMBER(b."Margin", 18, 2)) AS margin,
-        ROW_NUMBER() OVER (PARTITION BY b."Client Name" ORDER BY SUM(TRY_TO_NUMBER(b."Margin", 18, 2)) ASC) AS rn
+        SUM(b."Net Charges") AS revenue,
+        SUM(b."Margin") AS margin,
+        ROW_NUMBER() OVER (PARTITION BY b."Client Name" ORDER BY SUM(b."Margin") ASC) AS rn
       FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE b
       INNER JOIN neg_customers nc ON b."Client Name" = nc."Client Name"
       GROUP BY b."Client Name", b."Origin_City", b."Dest_City"
-      HAVING SUM(TRY_TO_NUMBER(b."Margin", 18, 2)) < 0
+      HAVING SUM(b."Margin") < 0
     )
     SELECT "Client Name", od_pair, revenue, margin
     FROM ranked WHERE rn <= 5
     ORDER BY "Client Name", margin ASC
-- name: top10_negative_margin_lanes_national
-  question: Top 10 negative margin lanes in National Linehaul
+  question: Top 5 OD pair wise lanes contributing to negative margin in top 10 negative margin customers
+  use_as_onboarding_question: false
+- name: TOP10_NEGATIVE_MARGIN_LANES_NATIONAL
   sql: |
     SELECT "Origin_City" || '-' || "Dest_City" AS od_pair,
-      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
-      SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost,
-      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin,
-      SUM(TRY_TO_NUMBER("Linehaul Cost", 18, 2)) AS linehaul_cost,
-      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg,
-      SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct
+      SUM("Net Charges") AS revenue,
+      SUM("Total Cost") AS total_cost,
+      SUM("Margin") AS margin,
+      SUM("Linehaul Cost") AS linehaul_cost,
+      SUM("TOT_CHRGWT") AS volume_kg,
+      SUM("Margin") / NULLIF(SUM("Net Charges"), 0) * 100 AS margin_pct
     FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
     WHERE "Origin_Terr" != "Dest_Terr"
     GROUP BY "Origin_City", "Dest_City"
-    HAVING SUM(TRY_TO_NUMBER("Margin", 18, 2)) < 0
+    HAVING SUM("Margin") < 0
     ORDER BY margin ASC
     LIMIT 10
-- name: top10_positive_margin_lanes_national
-  question: Top 10 positive margin lanes in National Linehaul
+  question: Top 10 negative margin lanes in National Linehaul
+  use_as_onboarding_question: false
+- name: TOP10_POSITIVE_MARGIN_LANES_NATIONAL
   sql: |
     SELECT "Origin_City" || '-' || "Dest_City" AS od_pair,
-      SUM(TRY_TO_NUMBER("Net Charges", 18, 2)) AS revenue,
-      SUM(TRY_TO_NUMBER("Total Cost", 18, 2)) AS total_cost,
-      SUM(TRY_TO_NUMBER("Margin", 18, 2)) AS margin,
-      SUM(TRY_TO_NUMBER("Linehaul Cost", 18, 2)) AS linehaul_cost,
-      SUM(TRY_TO_NUMBER("TOT_CHRGWT", 18, 4)) AS volume_kg,
-      SUM(TRY_TO_NUMBER("Margin", 18, 2)) / NULLIF(SUM(TRY_TO_NUMBER("Net Charges", 18, 2)), 0) * 100 AS margin_pct
+      SUM("Net Charges") AS revenue,
+      SUM("Total Cost") AS total_cost,
+      SUM("Margin") AS margin,
+      SUM("Linehaul Cost") AS linehaul_cost,
+      SUM("TOT_CHRGWT") AS volume_kg,
+      SUM("Margin") / NULLIF(SUM("Net Charges"), 0) * 100 AS margin_pct
     FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
     WHERE "Origin_Terr" != "Dest_Terr"
     GROUP BY "Origin_City", "Dest_City"
-    HAVING SUM(TRY_TO_NUMBER("Margin", 18, 2)) > 0
+    HAVING SUM("Margin") > 0
     ORDER BY margin DESC
     LIMIT 10
-module_custom_instructions:
-  sql_generation: 'Revenue = Net Charges column. Margin = pre-calculated Margin column. Margin% = SUM(Margin)/NULLIF(SUM(Net Charges),0)*100. CPK = SUM(Total Cost)/NULLIF(SUM(TOT_CHRGWT),0). Yield/RPK = SUM(Net Charges)/NULLIF(SUM(TOT_CHRGWT),0). Volume = TOT_CHRGWT (billed weight kg). National vs Regional: National means Origin_Terr != Dest_Terr (cross-territory). Regional means Origin_Terr = Dest_Terr (same territory). Do NOT use Route column for national/regional — it only has Surface. Top N: include revenue, margin, volume. 10 lakhs = 1000000. All numeric columns are VARCHAR, always use TRY_TO_NUMBER() for aggregations. Cost RCA: break Total Cost into Pickup, Delivery, Linehaul, Midmile, Handling, Common, Other costs. DATE FILTERING: For all time-based questions (this month, last month, this quarter, YTD, last N months), ALWAYS filter using InScan Date column — never use PICKUPDATE. InScan Date is the billing date and is the source of truth for business reporting. Use DATE_TRUNC with TRY_TO_TIMESTAMP("InScan Date") for all date filters. Shipment count: always use COUNT(DISTINCT "AWB No") for unique shipment counts.'
+  question: Top 10 positive margin lanes in National Linehaul
+  use_as_onboarding_question: false
+- name: BUSINESS_LAST_MONTH
+  sql: |
+    SELECT COUNT("AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers,
+      SUM("Net Charges") AS total_revenue,
+      SUM("Total Cost") AS total_cost,
+      SUM("Margin") AS total_margin,
+      SUM("Margin") / NULLIF(SUM("Net Charges"), 0) * 100 AS margin_pct,
+      SUM("TOT_CHRGWT") AS total_volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+  question: What was my business last month?
+  use_as_onboarding_question: false
+- name: BUSINESS_LAST_3_MONTHS
+  sql: |
+    SELECT DATE_TRUNC('month', "InScan Date") AS month,
+      COUNT("AWB No") AS shipments, COUNT(DISTINCT "Client Name") AS customers,
+      SUM("Net Charges") AS revenue,
+      SUM("Margin") AS margin,
+      SUM("TOT_CHRGWT") AS volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE "InScan Date" >= DATEADD('month', -3, CURRENT_DATE())
+    GROUP BY month ORDER BY month
+  question: What was my business in the last 3 months?
+  use_as_onboarding_question: false
+- name: BUSINESS_THIS_QUARTER
+  sql: |
+    SELECT COUNT("AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers,
+      SUM("Net Charges") AS total_revenue,
+      SUM("Margin") AS total_margin,
+      SUM("TOT_CHRGWT") AS total_volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE DATE_TRUNC('quarter', "InScan Date") = DATE_TRUNC('quarter', CURRENT_DATE())
+  question: What was my business this quarter?
+  use_as_onboarding_question: false
+- name: BUSINESS_YTD
+  sql: |
+    SELECT COUNT("AWB No") AS total_shipments, COUNT(DISTINCT "Client Name") AS unique_customers,
+      SUM("Net Charges") AS total_revenue,
+      SUM("Margin") AS total_margin,
+      SUM("TOT_CHRGWT") AS total_volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE YEAR("InScan Date") = YEAR(CURRENT_DATE())
+  question: What is my YTD business?
+  use_as_onboarding_question: false
+- name: TOP20_UPTRADING_CUSTOMERS
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", t.revenue AS current_revenue, l.revenue AS prev_revenue,
+      t.revenue - COALESCE(l.revenue, 0) AS revenue_change,
+      (t.revenue - COALESCE(l.revenue, 0)) / NULLIF(l.revenue, 0) * 100 AS pct_change
+    FROM this_month t LEFT JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE t.revenue > COALESCE(l.revenue, 0)
+    ORDER BY revenue_change DESC LIMIT 20
+  question: Top 20 uptrading customers by revenue this month vs last month
+  use_as_onboarding_question: false
+- name: TOP20_DOWNTRADING_CUSTOMERS
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT l."Client Name", COALESCE(t.revenue, 0) AS current_revenue, l.revenue AS prev_revenue,
+      COALESCE(t.revenue, 0) - l.revenue AS revenue_change,
+      (COALESCE(t.revenue, 0) - l.revenue) / NULLIF(l.revenue, 0) * 100 AS pct_change
+    FROM last_month l LEFT JOIN this_month t ON l."Client Name" = t."Client Name"
+    WHERE COALESCE(t.revenue, 0) < l.revenue
+    ORDER BY revenue_change ASC LIMIT 20
+  question: Top 20 downtrading customers by revenue this month vs last month
+  use_as_onboarding_question: false
+- name: NEW_CUSTOMERS_THIS_MONTH
+  sql: |
+    WITH current_customers AS (
+      SELECT DISTINCT "Client Name"
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+    ),
+    prev_customers AS (
+      SELECT DISTINCT "Client Name"
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE "InScan Date" < DATE_TRUNC('month', CURRENT_DATE())
+    )
+    SELECT c."Client Name", SUM(b."Net Charges") AS revenue
+    FROM current_customers c
+    LEFT JOIN prev_customers p ON c."Client Name" = p."Client Name"
+    JOIN XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE b ON c."Client Name" = b."Client Name"
+      AND DATE_TRUNC('month', b."InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+    WHERE p."Client Name" IS NULL
+    GROUP BY c."Client Name" ORDER BY revenue DESC
+  question: How many new customers have been added this month?
+  use_as_onboarding_question: false
+- name: YIELD_DROPPED_MOM
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name",
+        SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name" HAVING SUM("Net Charges") > 1000000
+    ),
+    last_month AS (
+      SELECT "Client Name",
+        SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name" HAVING SUM("Net Charges") > 1000000
+    )
+    SELECT t."Client Name", t.yield AS current_yield, l.yield AS prev_yield,
+      t.yield - l.yield AS yield_change,
+      (t.yield - l.yield) / NULLIF(l.yield, 0) * 100 AS pct_change
+    FROM this_month t JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE t.yield < l.yield
+    ORDER BY yield_change ASC LIMIT 10
+  question: Which customers yield dropped this month vs last month?
+  use_as_onboarding_question: false
+- name: REVENUE_TREND_MONTHLY
+  sql: |
+    SELECT DATE_TRUNC('month', "InScan Date") AS month,
+      SUM("Net Charges") AS revenue,
+      SUM("TOT_CHRGWT") AS volume_kg,
+      SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield_rpk,
+      SUM("Total Cost") / NULLIF(SUM("TOT_CHRGWT"), 0) AS cpk
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    GROUP BY month ORDER BY month
+  question: Revenue, RPK, Yield, Volume trend by month
+  use_as_onboarding_question: false
+- name: NATIONAL_VS_REGIONAL_TREND
+  sql: |
+    SELECT DATE_TRUNC('month', "InScan Date") AS month,
+      CASE WHEN "Origin_Terr" != "Dest_Terr" THEN 'National' ELSE 'Regional' END AS route_type,
+      SUM("Net Charges") AS revenue,
+      SUM("TOT_CHRGWT") AS volume_kg,
+      SUM("Margin") AS margin
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    GROUP BY month, route_type ORDER BY month, route_type
+  question: Trend of National vs Regional business by month
+  use_as_onboarding_question: false
+- name: YOY_GROWTH_TOP_CLIENTS
+  sql: |
+    WITH this_year AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE YEAR("InScan Date") = YEAR(CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_year AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE YEAR("InScan Date") = YEAR(CURRENT_DATE()) - 1
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", t.revenue AS current_year, l.revenue AS last_year,
+      (t.revenue - COALESCE(l.revenue, 0)) / NULLIF(l.revenue, 0) * 100 AS yoy_growth_pct
+    FROM this_year t LEFT JOIN last_year l ON t."Client Name" = l."Client Name"
+    ORDER BY t.revenue DESC LIMIT 20
+  question: YoY growth for top clients
+  use_as_onboarding_question: false
+- name: NEGATIVE_TO_POSITIVE_MARGIN
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM("Margin") AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM("Margin") AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", l.margin AS prev_margin, t.margin AS current_margin,
+      t.margin - l.margin AS margin_improvement
+    FROM this_month t JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE l.margin < 0 AND t.margin > 0
+    ORDER BY margin_improvement DESC
+  question: Customers who went from negative margin to positive margin
+  use_as_onboarding_question: false
+- name: POSITIVE_TO_NEGATIVE_MARGIN
+  sql: |
+    WITH this_month AS (
+      SELECT "Client Name", SUM("Margin") AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    last_month AS (
+      SELECT "Client Name", SUM("Margin") AS margin
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', DATEADD('month', -1, CURRENT_DATE()))
+      GROUP BY "Client Name"
+    )
+    SELECT t."Client Name", l.margin AS prev_margin, t.margin AS current_margin,
+      t.margin - l.margin AS margin_decline
+    FROM this_month t JOIN last_month l ON t."Client Name" = l."Client Name"
+    WHERE l.margin > 0 AND t.margin < 0
+    ORDER BY margin_decline ASC
+  question: Customers who went from positive margin to negative margin
+  use_as_onboarding_question: false
+- name: TOP10_YIELD_DROPPED_VS_6MONTHS_AGO
+  sql: |
+    WITH curr_month AS (
+      SELECT "Client Name",
+        SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', CURRENT_DATE())
+      GROUP BY "Client Name" HAVING SUM("Net Charges") > 1000000
+    ),
+    six_months_ago AS (
+      SELECT "Client Name",
+        SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE DATE_TRUNC('month', "InScan Date") = DATE_TRUNC('month', DATEADD('month', -6, CURRENT_DATE()))
+      GROUP BY "Client Name" HAVING SUM("Net Charges") > 1000000
+    )
+    SELECT c."Client Name", c.yield AS current_yield, s.yield AS prev_yield,
+      c.yield - s.yield AS yield_change,
+      (c.yield - s.yield) / NULLIF(s.yield, 0) * 100 AS pct_change
+    FROM curr_month c JOIN six_months_ago s ON c."Client Name" = s."Client Name"
+    WHERE c.yield < s.yield
+    ORDER BY yield_change ASC LIMIT 10
+  question: Top 10 customers whose yield dropped vs 6 months ago
+  use_as_onboarding_question: false
+- name: NATIONAL_REGIONAL_TREND_TOP10
+  sql: |
+    WITH top10 AS (
+      SELECT "Client Name"
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      GROUP BY "Client Name" ORDER BY SUM("Net Charges") DESC LIMIT 10
+    )
+    SELECT DATE_TRUNC('month', b."InScan Date") AS month,
+      b."Client Name",
+      CASE WHEN b."Origin_Terr" != b."Dest_Terr" THEN 'National' ELSE 'Regional' END AS route_type,
+      SUM(b."Net Charges") AS revenue,
+      SUM(b."TOT_CHRGWT") AS volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE b
+    JOIN top10 t ON b."Client Name" = t."Client Name"
+    GROUP BY month, b."Client Name", route_type
+    ORDER BY month, b."Client Name", route_type
+  question: Trend of National vs Regional for top 10 customers by month
+  use_as_onboarding_question: false
+- name: UPTRADING_LAST_7_DAYS
+  sql: |
+    WITH last_7 AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE "InScan Date" >= DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    prev_7 AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE "InScan Date" >= DATEADD('day', -14, CURRENT_DATE())
+        AND "InScan Date" < DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    )
+    SELECT l."Client Name", l.revenue AS last_7d_revenue, p.revenue AS prev_7d_revenue,
+      l.revenue - COALESCE(p.revenue, 0) AS change,
+      CASE WHEN l.revenue > COALESCE(p.revenue, 0) THEN 'Uptrading' ELSE 'Downtrading' END AS status
+    FROM last_7 l LEFT JOIN prev_7 p ON l."Client Name" = p."Client Name"
+    ORDER BY change DESC LIMIT 20
+  question: What is the uptrading status in the last 7 days?
+  use_as_onboarding_question: false
+- name: DOWNTRADING_LAST_7_DAYS
+  sql: |
+    WITH last_7 AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE "InScan Date" >= DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    ),
+    prev_7 AS (
+      SELECT "Client Name", SUM("Net Charges") AS revenue
+      FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+      WHERE "InScan Date" >= DATEADD('day', -14, CURRENT_DATE())
+        AND "InScan Date" < DATEADD('day', -7, CURRENT_DATE())
+      GROUP BY "Client Name"
+    )
+    SELECT p."Client Name", COALESCE(l.revenue, 0) AS last_7d_revenue, p.revenue AS prev_7d_revenue,
+      COALESCE(l.revenue, 0) - p.revenue AS change
+    FROM prev_7 p LEFT JOIN last_7 l ON p."Client Name" = l."Client Name"
+    WHERE COALESCE(l.revenue, 0) < p.revenue
+    ORDER BY change ASC LIMIT 20
+  question: What is the downtrading status in the last 7 days?
+  use_as_onboarding_question: false
+- name: MARGIN_IMPROVEMENT_RCA
+  sql: |
+    SELECT "Client Name",
+      SUM("Net Charges") AS revenue,
+      SUM("Total Cost") AS total_cost,
+      SUM("Margin") AS margin,
+      SUM("Pickup Cost") AS pickup_cost,
+      SUM("Delivery Cost") AS delivery_cost,
+      SUM("Linehaul Cost") AS linehaul_cost,
+      SUM("Midmile Cost") AS midmile_cost,
+      SUM("Handling Cost") AS handling_cost,
+      SUM("Common Costs") AS common_costs,
+      SUM("Other Costs") AS other_costs,
+      SUM("Net Charges") / NULLIF(SUM("TOT_CHRGWT"), 0) AS yield_rpk,
+      SUM("Total Cost") / NULLIF(SUM("TOT_CHRGWT"), 0) AS cpk
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE "Client Name" = '<CLIENT_NAME>'
+    GROUP BY "Client Name"
+  question: How can I improve margin for a customer?
+  use_as_onboarding_question: false
+- name: MARGIN_TREND_BY_CUSTOMER
+  sql: |
+    SELECT DATE_TRUNC('month', "InScan Date") AS month,
+      SUM("Net Charges") AS revenue,
+      SUM("Margin") AS margin,
+      SUM("Margin") / NULLIF(SUM("Net Charges"), 0) * 100 AS margin_pct,
+      SUM("TOT_CHRGWT") AS volume_kg
+    FROM XPRESSBEES_PROFITABILITY.RAW.B2B_REVENUE
+    WHERE "Client Name" = '<CLIENT_NAME>'
+    GROUP BY month ORDER BY month
+  question: What is the margin trend for a customer by month?
+  use_as_onboarding_question: false
