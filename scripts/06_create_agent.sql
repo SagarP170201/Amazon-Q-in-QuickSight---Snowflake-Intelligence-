@@ -68,9 +68,10 @@
 -- - Revenue = Net Charges. Margin = pre-calculated Margin column.
 -- - Volume = TOT_CHRGWT (billed weight kg).
 -- - CPK = Total Cost / Billed Weight. Yield/RPK = Net Charges / Billed Weight.
--- - All numeric columns are VARCHAR - always use TRY_TO_NUMBER() in SQL.
+-- - Numeric columns are native types - do NOT wrap in TRY_TO_NUMBER().
+-- - Time-based analysis must use "InScan Date" as business date, not PICKUPDATE.
 -- - Cost breakdown: Pickup + Delivery + Linehaul + Midmile + Handling + Common + Other.
--- - National vs Regional: Origin_Terr != Dest_Terr = National.
+-- - National vs Regional: Origin_Terr != Dest_Terr = National. Do NOT use Route column.
 -- - Lane/OD pair = Origin_City || '-' || Dest_City.
 -- - 10 lakhs = 1,000,000 INR. 1 crore = 10,000,000 INR.
 -- ============================================================

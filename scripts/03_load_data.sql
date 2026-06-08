@@ -6,7 +6,9 @@
 --    - Revenue files: Revenue October.parquet, Revenue November.parquet, etc.
 --    - AWB files: AWB Created or Picked in oct.parquet, etc.
 --    - FM/LM/MM Journey files: FM Journey October.parquet, etc.
+--    - Daily Load files: Daily_Load_October.parquet, etc.
 --    - Weighted Utilization files: Use the CLEANED parquets from scripts/07_prepare_wu_files.py
+--    - Dimension files: Hub-city_mapping.parquet, Hub_to_zone_mapping.parquet (one-time)
 -- 2. For WU files: Run scripts/07_prepare_wu_files.py first to clean headers
 -- ============================================================
 
@@ -49,11 +51,31 @@ FILE_FORMAT = (TYPE = 'PARQUET')
 PATTERN = '.*[Mm][Mm].*[Jj]ourney.*\.parquet'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
 
+-- Daily Load (all months)
+COPY INTO DAILY_LOAD
+FROM @DATA_STAGE
+FILE_FORMAT = (TYPE = 'PARQUET')
+PATTERN = '.*[Dd]aily.*[Ll]oad.*\.parquet'
+MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
+
 -- Weighted Utilization (use cleaned files from 07_prepare_wu_files.py)
 COPY INTO WEIGHTED_UTILIZATION
 FROM @DATA_STAGE
 FILE_FORMAT = (TYPE = 'PARQUET')
 PATTERN = '.*[Ww]eighted.*_clean\.parquet'
+MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
+
+-- Dimension tables (load once)
+COPY INTO DIM_HUB_CITY
+FROM @DATA_STAGE
+FILE_FORMAT = (TYPE = 'PARQUET')
+PATTERN = '.*[Hh]ub.*[Cc]ity.*\.parquet'
+MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
+
+COPY INTO DIM_HUB_TO_ZONE
+FROM @DATA_STAGE
+FILE_FORMAT = (TYPE = 'PARQUET')
+PATTERN = '.*[Hh]ub.*[Zz]one.*\.parquet'
 MATCH_BY_COLUMN_NAME = CASE_INSENSITIVE;
 
 -- Verify row counts
@@ -62,4 +84,7 @@ UNION ALL SELECT 'AWB_FILE', COUNT(*) FROM AWB_FILE
 UNION ALL SELECT 'FM_JOURNEY', COUNT(*) FROM FM_JOURNEY
 UNION ALL SELECT 'LM_JOURNEY', COUNT(*) FROM LM_JOURNEY
 UNION ALL SELECT 'MM_JOURNEY', COUNT(*) FROM MM_JOURNEY
-UNION ALL SELECT 'WEIGHTED_UTILIZATION', COUNT(*) FROM WEIGHTED_UTILIZATION;
+UNION ALL SELECT 'DAILY_LOAD', COUNT(*) FROM DAILY_LOAD
+UNION ALL SELECT 'WEIGHTED_UTILIZATION', COUNT(*) FROM WEIGHTED_UTILIZATION
+UNION ALL SELECT 'DIM_HUB_CITY', COUNT(*) FROM DIM_HUB_CITY
+UNION ALL SELECT 'DIM_HUB_TO_ZONE', COUNT(*) FROM DIM_HUB_TO_ZONE;
